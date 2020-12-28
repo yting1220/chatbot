@@ -1,4 +1,5 @@
 from flask import Flask, request, jsonify
+from allennlp.predictors.predictor import Predictor
 import chatbot_func
 
 app = Flask(__name__)
@@ -13,7 +14,7 @@ def webhook():
     print(req)
 
     try:
-        response_dict = getattr(chatbot_func, req['handler']['name'])(userSay, session_id, time)
+        response_dict = getattr(chatbot_func, req['handler']['name'])(userSay, session_id, time, predictor)
     except TypeError:
         response_dict = getattr(chatbot_func, req['handler']['name'])(req)
 
@@ -21,4 +22,6 @@ def webhook():
 
 
 if __name__ == "__main__":
+    predictor = Predictor.from_path(
+        "https://storage.googleapis.com/allennlp-public-models/biaffine-dependency-parser-ptb-2020.04.06.tar.gz")
     app.run(debug=True, port=8888)

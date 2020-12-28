@@ -2,7 +2,6 @@ import pymongo
 from random import choice
 import os
 # from google.cloud import translate_v2
-from allennlp.predictors.predictor import Predictor
 from nltk.corpus import wordnet as wn
 from googletrans import Translator
 from strsimpy.cosine import Cosine
@@ -55,7 +54,7 @@ def connect():
 
 
 # 詢問座號
-def user_login(userSay, session_id, time):
+def user_login(userSay, session_id, time, predictor):
     print("START")
     response = '哈囉~請先告訴我你的座號唷~'
     response_dict = {"prompt": {
@@ -68,7 +67,7 @@ def user_login(userSay, session_id, time):
 
 
 # 詢問書名
-def start_chat(userSay, session_id, time):
+def start_chat(userSay, session_id, time, predictor):
     print("START")
     connect()
     global user_id
@@ -87,7 +86,7 @@ def start_chat(userSay, session_id, time):
 
 
 # 比對書名
-def check_book(userSay, session_id, time):
+def check_book(userSay, session_id, time, predictor):
     print('CHECK')
     global bookName, myVerbList, allDialog, firstTime, dialog_id, qa_id, myQATable, myElaboration, double_check
     connect()
@@ -147,7 +146,7 @@ def check_book(userSay, session_id, time):
 
 
 # 聊書引導
-def prompt(userSay, session_id, time):
+def prompt(userSay, session_id, time, predictor):
     print("PROMPT")
     global dialog_id
     if firstTime:
@@ -173,7 +172,7 @@ def prompt(userSay, session_id, time):
 
 
 # 比對故事內容
-def evaluate(userSay, session_id, time):
+def evaluate(userSay, session_id, time, predictor):
     print("EVALUATE")
     global now_user_say, repeat_content, record_list, match_verb, match_entity, firstTime, now_index, dialog_id, qa_id, double_check
     firstTime = False
@@ -187,9 +186,6 @@ def evaluate(userSay, session_id, time):
     # 記錄對話過程
     createLibrary.addDialog(bookName, session_id, dialog_id, 'Student '+user_id, userSay, time)
     dialog_id += 1
-
-    predictor = Predictor.from_path(
-        "https://storage.googleapis.com/allennlp-public-models/biaffine-dependency-parser-ptb-2020.04.06.tar.gz")
 
     translator = Translator()
 
@@ -409,7 +405,6 @@ def evaluate(userSay, session_id, time):
                     if all_QA_cursor is None:
                         qa_id = 1
                     else:
-                        print('QA數量：'+str(all_QA_cursor.count()))
                         qa_id = all_QA_cursor.count() + 1
 
                     # 存入比對不到的使用者對話
@@ -443,7 +438,7 @@ def evaluate(userSay, session_id, time):
 
 
 # 比對正確則覆述使用者說的故事
-def repeat(userSay, session_id, time):
+def repeat(userSay, session_id, time, predictor):
     print("REPEAT")
     global dialog_id, double_check
     # response = ''
@@ -482,7 +477,7 @@ def repeat(userSay, session_id, time):
 
 
 # 接續使用者的下一句
-def retrive(userSay, session_id, time):
+def retrive(userSay, session_id, time, predictor):
     print("RETRIVE")
     global now_index, dialog_id
     connect()
@@ -562,7 +557,7 @@ def retrive(userSay, session_id, time):
 
 
 # 確認比對到的QA
-def inquire(userSay, session_id, time):
+def inquire(userSay, session_id, time, predictor):
     print('Inquire')
     global dialog_id, double_check
 
@@ -576,7 +571,6 @@ def inquire(userSay, session_id, time):
     find_common_2 = {'type': 'common_repeat'}
     find_common_result_2 = myCommonList.find_one(find_common_2)
     response = choice(find_common_result['content']) + " " + result['Elaboration'] + " " + choice(find_common_result_2['content'])
-
     # 記錄對話過程
     createLibrary.addDialog(bookName, session_id, dialog_id, 'chatbot', response, time)
     dialog_id += 1
@@ -597,7 +591,7 @@ def inquire(userSay, session_id, time):
 
 
 # 二次確認正確 > 覆述 > 接續common_grow_check
-def inquire_double_check(userSay, session_id, time):
+def inquire_double_check(userSay, session_id, time, predictor):
     print("Inquire_double_check")
     global dialog_id
 
@@ -661,7 +655,7 @@ def inquire_double_check(userSay, session_id, time):
 
 
 # 增加新的Elaboration
-def addElaboration(userSay, session_id, time):
+def addElaboration(userSay, session_id, time, predictor):
     print('Elaboration')
     global dialog_id, double_check, qa_id
     double_check = False
@@ -701,12 +695,4 @@ def addElaboration(userSay, session_id, time):
     print(response)
     return response_dict
 
-
-if __name__ == '__main__':
-    cosine = Cosine(2)
-    s = 'First sentence'
-    s2 = 'Second sentence'
-    p = cosine.get_profile(s)
-    p2 = cosine.get_profile(s2)
-    print(cosine.similarity_profiles(p,p2))
 
