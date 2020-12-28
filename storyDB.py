@@ -1,3 +1,4 @@
+# 建立故事內容及關鍵字資料庫
 from allennlp.predictors.predictor import Predictor
 import copy
 # from google.cloud import translate_v2

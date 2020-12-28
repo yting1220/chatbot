@@ -1,8 +1,10 @@
+# 建立通用句及書單資料庫
 import pymongo
 # from google.cloud import translate_v2
 from googletrans import Translator
 import os
 os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = 'dict/key.json'
+
 
 def connect():
     try:
