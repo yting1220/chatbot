@@ -119,7 +119,7 @@ def story_analysis():
     verbInfo = {}
     for i in verbName:
         verbInfo[i] = {"Frequence": verbName.count(i)}
-    createLibrary.addBookKeyword(story_name, entityInfo, verbInfo)
+    # createLibrary.addBookKeyword(story_name, entityInfo, verbInfo)
 
     # 排序entity
     main_entity = []
@@ -127,7 +127,6 @@ def story_analysis():
     temp = int(len(sort_entity)*0.3)
     for i in sort_entity[:temp]:
         main_entity.append(i[0])
-    print("主要entity"+str(main_entity))
 
     # 抓出主要SVO
     for i in range(len(story_2_PhraseList)):
@@ -199,7 +198,7 @@ def story_analysis():
             # source = 'en'
             # target = 'zh-TW'
             try:
-                sentence_Translate = translator.translate(storyPhraseList[i], src="en", dest="zh-TW").text
+                sentence_Translate = [translator.translate(storyPhraseList[i], src="en", dest="zh-TW").text]
                 # sentence_Translate = translate_client.translate(
                 #     storyPhraseList[i],
                 #     source_language=source,
