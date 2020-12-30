@@ -5,10 +5,9 @@ import os
 from nltk.corpus import wordnet as wn
 from googletrans import Translator
 from strsimpy.cosine import Cosine
-
 import createLibrary
 
-os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = 'dict/key.json'
+# os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = 'dict/key.json'
 
 myClient: object
 myLibrary: object
@@ -187,7 +186,7 @@ def evaluate(userSay, session_id, time, predictor):
     response = ''
 
     # 記錄對話過程
-    createLibrary.addDialog(bookName, session_id, dialog_id, 'Student '+user_id, userSay, time)
+    createLibrary.addDialog(bookName, session_id, dialog_id, 'Student ' + user_id, userSay, time)
     dialog_id += 1
 
     translator = Translator()
@@ -216,7 +215,7 @@ def evaluate(userSay, session_id, time, predictor):
             p1 = cosine.get_profile(s1)
             p2 = cosine.get_profile(s2)
             if cosine.similarity_profiles(p1, p2) >= 0.7:
-                print('第'+str(cursor['Sentence_id'])+'句有高相似度：'+str(cosine.similarity_profiles(p1, p2)))
+                print('第' + str(cursor['Sentence_id']) + '句有高相似度：' + str(cosine.similarity_profiles(p1, p2)))
                 if cosine.similarity_profiles(p1, p2) > temp:
                     similarity_sentence = cursor['Sentence_id']
                     temp = cosine.similarity_profiles(p1, p2)
@@ -261,28 +260,29 @@ def evaluate(userSay, session_id, time, predictor):
 
             loop = 3
             # 都不為空才進行二次確認
-            if (len(user_c1) != 0 and len(user_v) != 0 and len(user_c2) != 0) and (story_c1 != '' and story_v != '' and story_c2 != ''):
+            if (len(user_c1) != 0 and len(user_v) != 0 and len(user_c2) != 0) and (
+                    story_c1 != '' and story_v != '' and story_c2 != ''):
                 while loop > 0:
-                    if not checkC1:
-                        for word in user_c1:
-                            # 找C1
-                            print(word)
-                            word_case = []
-                            word_case.extend([word, word.lower(), word.capitalize(), word.upper()])
-                            print(word_case)
-                            for index in word_case:
-                                find_sentence = myVerbList.find_one({'Sentence_id': similarity_sentence})
-                                for c1_index in find_sentence['C1']:
-                                    if c1_index == index:
-                                        checkC1 = True
-                                        temp_match.append(similarity_sentence)
-                                        if index not in match_entity:
-                                            match_entity.append(index)
-                                        break
-                                print('match_C1：' + str(temp_match))
-                                if checkC1:
+                    # 先比對C1
+                    for word in user_c1:
+                        print(word)
+                        word_case = []
+                        word_case.extend([word, word.lower(), word.capitalize(), word.upper()])
+                        print(word_case)
+                        for index in word_case:
+                            for c1_index in story_c1:
+                                if c1_index == index:
+                                    checkC1 = True
+                                    if index not in match_entity:
+                                        match_entity.append(index)
                                     break
-                    elif not checkVerb and not checkC2:
+                            if checkC1:
+                                break
+                    if not checkC1:
+                        # 都沒找到
+                        no_match = True
+                        break
+                    else:
                         for word in user_v:
                             # 找V
                             print(word)
@@ -291,68 +291,62 @@ def evaluate(userSay, session_id, time, predictor):
                                 word_case.extend([i, i.lower(), i.capitalize(), i.upper()])
                             print(word_case)
                             for index in word_case:
-                                t.extend(temp_match)
-                                temp_match.clear()
-                                print("123："+str(t))
-                                for sentence in t:
-                                    find_sentence = myVerbList.find_one({'Sentence_id': sentence})
-                                    for v_index in find_sentence['Verb']:
-                                        verb_allResult = wn._morphy(v_index, pos='v')
-                                        print("456："+str(verb_allResult))
-                                        for j in verb_allResult:
-                                            if j == index:
-                                                checkVerb = True
-                                                temp_match.append(sentence)
-                                                if index not in match_verb:
-                                                    match_verb.append(index)
-                                                break
-                                        break
-                                print('match_V：' + str(temp_match))
+                                for v_index in story_v:
+                                    verb_allResult = wn._morphy(v_index, pos='v')
+                                    for j in verb_allResult:
+                                        if j == index:
+                                            checkVerb = True
+                                            if index not in match_verb:
+                                                match_verb.append(index)
+                                            break
+                                    break
                                 if checkVerb:
                                     break
-                    else:
-                        for word in user_c2:
+                        if not checkVerb:
+                            # 都沒找到
+                            no_match = True
+                            break
+                        else:
                             # 找C2
-                            print(word)
-                            word_case = []
-                            word_case.extend([word, word.lower(), word.capitalize(), word.upper()])
-                            print(word_case)
-                            for index in word_case:
-                                t.clear()
-                                t.extend(temp_match)
-                                temp_match.clear()
-                                for sentence in t:
-                                    find_sentence = myVerbList.find_one({'Sentence_id': sentence})
-                                    for c2_index in find_sentence['C2']:
+                            for word in user_c2:
+                                print(word)
+                                word_case = []
+                                word_case.extend([word, word.lower(), word.capitalize(), word.upper()])
+                                print(word_case)
+                                for index in word_case:
+                                    for c2_index in story_c2:
                                         if c2_index == index:
                                             checkC2 = True
-                                            temp_match.append(sentence)
                                             if index not in match_entity:
                                                 match_entity.append(index)
                                             break
-                                print('match_C2：' + str(temp_match))
-                                if checkC2:
-                                    break
+                                    if checkC2:
+                                        break
+                            if not checkVerb:
+                                # 都沒找到
+                                no_match = True
+                                break
                     loop -= 1
 
-                for i in temp_match:
-                    record_list.append(i)
-                    now_index.append(i)
-                print(str(checkC1) + ',' + str(checkC2) + ',' + str(checkVerb) + ',RESULT_match' + str(temp_match))
+                if similarity_sentence not in record_list:
+                    record_list.append(similarity_sentence)
+                now_index.append(similarity_sentence)
+
+                print(str(checkC1) + ',' + str(checkC2) + ',' + str(checkVerb))
                 all_cursor = myVerbList.find()
                 if checkVerb and checkC2 and checkC1:
                     # 比對成功
                     find_common = {'type': 'common_evaluate'}
                     find_common_result = myCommonList.find_one(find_common)
                     response = choice(find_common_result['content'])
-                    for i in temp_match:
-                        repeat_content.append(
-                            all_cursor[i]['sentence_Translate'].replace('。', '').replace('，', '').replace('！',
-                                                                                                          '').replace(
-                                '”',
-                                '').replace(
-                                '：', '').replace('“', ''))
-                    state = 'False'
+                    repeat_content.append(
+                        all_cursor[similarity_sentence]['sentence_Translate'].replace('。', '').replace('，', '').replace(
+                            '！',
+                            '').replace(
+                            '”',
+                            '').replace(
+                            '：', '').replace('“', ''))
+                    state = False
                     createLibrary.addUser('Student ' + user_id, bookName, record_list, match_entity, match_verb, state)
                     print('句子：' + str(temp_match))
 
@@ -371,7 +365,6 @@ def evaluate(userSay, session_id, time, predictor):
                         }
                     }
                 else:
-                    print("GO QA")
                     no_match = True
             else:
                 # 相似度符合 但故事結構不完整 接續repeat
@@ -385,11 +378,11 @@ def evaluate(userSay, session_id, time, predictor):
                 response = choice(find_common_result['content'])
                 repeat_content.append(
                     all_cursor[similarity_sentence]['sentence_Translate'].replace('。', '').replace('，', '').replace('！',
-                                                                                                  '').replace(
+                                                                                                                    '').replace(
                         '”',
                         '').replace(
                         '：', '').replace('“', ''))
-                state = 'False'
+                state = False
                 createLibrary.addUser('Student ' + user_id, bookName, record_list, match_entity, match_verb, state)
 
                 # 記錄對話過程
@@ -408,16 +401,15 @@ def evaluate(userSay, session_id, time, predictor):
                 }
         else:
             # 沒有相似的句子
-            print("GO QA")
             no_match = True
 
         if no_match:
             if double_check:
                 response_dict = {"scene": {
-                        "next": {
-                            'name': 'Elaboration'
-                        }
+                    "next": {
+                        'name': 'Elaboration'
                     }
+                }
                 }
             else:
                 all_QA_cursor = myQATable.find()
@@ -430,7 +422,7 @@ def evaluate(userSay, session_id, time, predictor):
                         s2 = cursor['Response']
                         p1 = cosine.get_profile(s1)
                         p2 = cosine.get_profile(s2)
-                        print('QA相似度：'+str(cosine.similarity_profiles(p1, p2)))
+                        print('QA相似度：' + str(cosine.similarity_profiles(p1, p2)))
                         if cosine.similarity_profiles(p1, p2) >= 0.7:
                             qa_id = cursor['QA_id']
                             QAMatch = True
@@ -548,7 +540,8 @@ def retrive(userSay, session_id, time, predictor):
                 find_condition = {'Sentence_id': record_list[len(record_list) - 1]}
                 find_result_cursor = myVerbList.find_one(find_condition)
                 story_conj = '故事裡還有提到'
-                response = story_conj + ' ' + find_result_cursor["sentence_Translate"].replace('。', '').replace('，', '').replace(
+                response = story_conj + ' ' + find_result_cursor["sentence_Translate"].replace('。', '').replace('，',
+                                                                                                                '').replace(
                     '！', '').replace('”', '').replace('：', '').replace('“', '')
                 if (record_list[len(record_list) - 1]) not in record_list:
                     record_list.append(record_list[len(record_list) - 1])
@@ -563,7 +556,8 @@ def retrive(userSay, session_id, time, predictor):
                 find_common = {'type': 'common_conj'}
                 find_common_result = myCommonList.find_one(find_common)
                 story_conj = choice(find_common_result['content'])
-                response = story_conj + ' ' + find_result_next["sentence_Translate"].replace('。', '').replace('，', '').replace(
+                response = story_conj + ' ' + find_result_next["sentence_Translate"].replace('。', '').replace('，',
+                                                                                                              '').replace(
                     '！', '').replace('”', '').replace('：', '').replace('“', '')
                 if (now_index[0] + 1) not in record_list:
                     record_list.append(now_index[0] + 1)
@@ -605,7 +599,8 @@ def inquire(userSay, session_id, time, predictor):
     find_common_result = myCommonList.find_one(find_common)
     find_common_2 = {'type': 'common_repeat'}
     find_common_result_2 = myCommonList.find_one(find_common_2)
-    response = choice(find_common_result['content']) + " " + result['Elaboration'] + " " + choice(find_common_result_2['content'])
+    response = choice(find_common_result['content']) + " " + result['Elaboration'] + " " + choice(
+        find_common_result_2['content'])
     # 記錄對話過程
     createLibrary.addDialog(bookName, session_id, dialog_id, 'chatbot', response, time)
     dialog_id += 1
@@ -615,11 +610,11 @@ def inquire(userSay, session_id, time, predictor):
             "speech": response,
             "text": response
         }},
-            "scene": {
-                "next": {
-                    'name': 'PROMPT'
-                }
+        "scene": {
+            "next": {
+                'name': 'PROMPT'
             }
+        }
     }
     print(response)
     return response_dict
@@ -632,7 +627,7 @@ def inquire_double_check(userSay, session_id, time, predictor):
 
     if userSay == '對' or userSay == '是' or '恩' in userSay or '嗯' in userSay:
         find_result = {'QA_id': qa_id}
-        print('QA_id'+str(qa_id))
+        print('QA_id' + str(qa_id))
         result = myElaboration.find_one(find_result)
         myquery = {"Confidence": result['Confidence']}
         newvalues = {"$set": {"Confidence": result['Confidence'] + 1}}
@@ -643,7 +638,7 @@ def inquire_double_check(userSay, session_id, time, predictor):
         find_common_result = myCommonList.find_one(find_common)
         find_common_2 = {'type': 'common_repeat'}
         find_common_result_2 = myCommonList.find_one(find_common_2)
-        response = choice(find_common_result['content'])+' '+choice(find_common_result_2['content'])
+        response = choice(find_common_result['content']) + ' ' + choice(find_common_result_2['content'])
 
         # 記錄對話過程
         createLibrary.addDialog(bookName, session_id, dialog_id, 'chatbot', response, time)
@@ -701,7 +696,7 @@ def addElaboration(userSay, session_id, time, predictor):
     createLibrary.addElaboration(bookName, qa_id, userSay, confidence, sentence_id)
 
     # 記錄對話過程
-    createLibrary.addDialog(bookName, session_id, dialog_id, 'Student '+user_id, userSay, time)
+    createLibrary.addDialog(bookName, session_id, dialog_id, 'Student ' + user_id, userSay, time)
     dialog_id += 1
 
     find_common = {'type': 'common_inqurie_new'}
@@ -729,5 +724,3 @@ def addElaboration(userSay, session_id, time, predictor):
     qa_id += 1
     print(response)
     return response_dict
-
-
