@@ -1,6 +1,5 @@
 # 建立通用句及書單資料庫
 import pymongo
-# from google.cloud import translate_v2
 from googletrans import Translator
 import os
 os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = 'dict/key.json'
@@ -29,19 +28,7 @@ def addBook(myBookList):
     # 新增書單
     bookList = ['Fairy friends']
     translator = Translator()
-    # translate_client = translate_v2.Client()
-    # source = 'en'
-    # target = 'zh-TW'
     for i in range(len(bookList)):
-        # while True:
-        #     try:
-        #         trans_bookName = translate_client.translate(
-        #             bookList[i],
-        #             source_language=source,
-        #             target_language=target)
-        #         break
-        #     except Exception as e:
-        #         print(e)
         book_dict = {'type': '精靈', 'bookName': bookList[i], 'bookNameTranslate': translator.translate(bookList[i], src="en", dest="zh-TW").text}
         myBookList.insert_one(book_dict)
         print(book_dict)
@@ -142,42 +129,39 @@ def addBookKeyword(bookName, entityList, verbList):
 
 def addUser(userId, bookName, record_list, match_entity, match_verb, state):
     # 連接mongo
-    book_exist = False
 
     myClient = pymongo.MongoClient("mongodb://localhost:27017/")
     myLibrary = myClient.Library
     myUserList = myLibrary.userTable
-    bookTalkSummary = {bookName: {'Sentence_id_list': record_list, 'Entity_list': match_entity,
-                                              'Verb_list': match_verb, 'Finish': state}}
+    bookTalkSummary = {'Sentence_id_list': record_list, 'Entity_list': match_entity,
+                                              'Verb_list': match_verb, 'Finish': state}
 
-    mydict = {'User_id': userId, 'BookTalkSummary': bookTalkSummary}
-    myUserList.insert(mydict)
-    print(mydict)
-    # if myUserList.find() is None:
-    #     #資料庫無資料
-    #     find_condition = {'User_id': userId}
-    #     now_user = myUserList.find_one(find_condition)
-    #     # 若沒有該使用者之資料
-    #     if now_user is None:
-    #         # 直接新增一筆
-    #         mydict = {'User_id': userId, 'BookTalkSummary': bookTalkSummary}
-    #         myUserList.insert(mydict)
-    #         print(mydict)
-    #     # 有該使用者資料
-    #     else:
-    #         # 有該本書之資料
-    #         list_item = list(now_user['BookTalkSummary'].keys())
-    #         for i in list_item:
-    #             if i == bookName:
-    #                 # newvalues = {"$set": bookTalkSummary}
-    #                 # myUserList.update_one(find_condition, newvalues)
-    #                 book_exist = True
-    #                 break
-    #         if not book_exist:
-    #             print()
-    #             # 同一筆資料新增東西
-    #             newvalues = {"$set": now_user['BookTalkSummary'].append(bookTalkSummary)}
-    #             myUserList.update_one(find_condition, newvalues)
+    if myUserList.find() is None:
+        #資料庫無資料 > 直接新增一筆
+        mydict = {'User_id': userId, 'BookTalkSummary': {bookName: bookTalkSummary}}
+        myUserList.insert(mydict)
+        print(mydict)
+    else:
+        find_user = {'User_id': userId}
+        now_user = myUserList.find_one(find_user)
+        # 若沒有該使用者之資料
+        if now_user is None:
+            # 直接新增一筆
+            mydict = {'User_id': userId, 'BookTalkSummary': {bookName: bookTalkSummary}}
+            myUserList.insert(mydict)
+            print(mydict)
+        # 有該使用者資料
+        else:
+            if bookName in now_user['BookTalkSummary']:
+                # 有該本書之資料 > 更新內容
+                newvalues = {"$set": {'BookTalkSummary': {bookName: bookTalkSummary}}}
+                myUserList.update_one(find_user, newvalues)
+            else:
+                # 同一筆資料下新增key值
+                temp = now_user['BookTalkSummary']
+                temp[bookName] = bookTalkSummary
+                newvalues = {"$set": {'BookTalkSummary': temp}}
+                myUserList.update_one(find_user, newvalues)
 
 
 def addDialog(bookName, session_id, dialog_id, speaker_id, content, time):

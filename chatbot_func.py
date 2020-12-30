@@ -116,6 +116,9 @@ def check_book(userSay, session_id, time, predictor):
         myQATable = nowBook['QATable']
         myElaboration = nowBook['Elaboration']
 
+        state = False
+        createLibrary.addUser('Student ' + user_id, bookName, record_list, match_entity, match_verb, state)
+
         response_dict = {"prompt": {
             "firstSimple": {
                 "speech": response,
@@ -202,9 +205,10 @@ def evaluate(userSay, session_id, time, predictor):
             except Exception as e:
                 print(e)
 
-        similarity_sentence = []
+        similarity_sentence = ' '
         # 使用相似度比對
         all_cursor = myVerbList.find()
+        temp = 0
         for cursor in all_cursor:
             cosine = Cosine(2)
             s1 = trans_word
@@ -212,10 +216,13 @@ def evaluate(userSay, session_id, time, predictor):
             p1 = cosine.get_profile(s1)
             p2 = cosine.get_profile(s2)
             if cosine.similarity_profiles(p1, p2) >= 0.7:
-                similarity_sentence.append(cursor['Sentence_id'])
+                print('第'+str(cursor['Sentence_id'])+'句有高相似度：'+str(cosine.similarity_profiles(p1, p2)))
+                if cosine.similarity_profiles(p1, p2) > temp:
+                    similarity_sentence = cursor['Sentence_id']
+                    temp = cosine.similarity_profiles(p1, p2)
 
         print('similarity_sentence：' + str(similarity_sentence))
-        if len(similarity_sentence) != 0:
+        if similarity_sentence != ' ':
             # 有相似的句子
             result = predictor.predict(
                 sentence=trans_word
@@ -247,9 +254,14 @@ def evaluate(userSay, session_id, time, predictor):
             temp_match = []
             t = []
 
+            all_cursor = myVerbList.find()
+            story_c1 = all_cursor[similarity_sentence]['C1']
+            story_v = all_cursor[similarity_sentence]['Verb']
+            story_c2 = all_cursor[similarity_sentence]['C2']
+
             loop = 3
             # 都不為空才進行二次確認
-            if user_c1 is not None and user_v is not None and user_c2 is not None:
+            if (len(user_c1) != 0 and len(user_v) != 0 and len(user_c2) != 0) and (story_c1 != '' and story_v != '' and story_c2 != ''):
                 while loop > 0:
                     if not checkC1:
                         for word in user_c1:
@@ -259,15 +271,14 @@ def evaluate(userSay, session_id, time, predictor):
                             word_case.extend([word, word.lower(), word.capitalize(), word.upper()])
                             print(word_case)
                             for index in word_case:
-                                for sentence in similarity_sentence:
-                                    find_sentence = myVerbList.find_one({'Sentence_id': sentence})
-                                    for c1_index in find_sentence['C1']:
-                                        if c1_index == index:
-                                            checkC1 = True
-                                            temp_match.append(sentence)
-                                            if index not in match_entity:
-                                                match_entity.append(index)
-                                            break
+                                find_sentence = myVerbList.find_one({'Sentence_id': similarity_sentence})
+                                for c1_index in find_sentence['C1']:
+                                    if c1_index == index:
+                                        checkC1 = True
+                                        temp_match.append(similarity_sentence)
+                                        if index not in match_entity:
+                                            match_entity.append(index)
+                                        break
                                 print('match_C1：' + str(temp_match))
                                 if checkC1:
                                     break
@@ -363,8 +374,38 @@ def evaluate(userSay, session_id, time, predictor):
                     print("GO QA")
                     no_match = True
             else:
-                print("GO QA")
-                no_match = True
+                # 相似度符合 但故事結構不完整 接續repeat
+                if similarity_sentence not in record_list:
+                    record_list.append(similarity_sentence)
+                now_index.append(similarity_sentence)
+
+                all_cursor = myVerbList.find()
+                find_common = {'type': 'common_evaluate'}
+                find_common_result = myCommonList.find_one(find_common)
+                response = choice(find_common_result['content'])
+                repeat_content.append(
+                    all_cursor[similarity_sentence]['sentence_Translate'].replace('。', '').replace('，', '').replace('！',
+                                                                                                  '').replace(
+                        '”',
+                        '').replace(
+                        '：', '').replace('“', ''))
+                state = 'False'
+                createLibrary.addUser('Student ' + user_id, bookName, record_list, match_entity, match_verb, state)
+
+                # 記錄對話過程
+                createLibrary.addDialog(bookName, session_id, dialog_id, 'chatbot', response, time)
+
+                response_dict = {"prompt": {
+                    "firstSimple": {
+                        "speech": response,
+                        "text": response
+                    }},
+                    "scene": {
+                        "next": {
+                            'name': 'REPEAT'
+                        }
+                    }
+                }
         else:
             # 沒有相似的句子
             print("GO QA")
@@ -407,7 +448,7 @@ def evaluate(userSay, session_id, time, predictor):
                     else:
                         qa_id = all_QA_cursor.count() + 1
 
-                    # 存入比對不到的使用者對話
+                    # 存入比對不到的使用者對話similarity_sentence
                     createLibrary.addQuestion(bookName, qa_id, dialog_id - 1, userSay)
 
                     # 請使用者補充說明
@@ -482,6 +523,7 @@ def retrive(userSay, session_id, time, predictor):
     global now_index, dialog_id
     connect()
     all_cursor = myVerbList.find()
+    print(record_list)
     if record_list[len(record_list) - 1] == (all_cursor.count() - 1):
         # 講到最後一句
         response = "看來你對這本書已經很熟悉了呢!"
@@ -503,35 +545,28 @@ def retrive(userSay, session_id, time, predictor):
                 record_list.append(0)
             else:
                 # 依據前次記錄到的句子接續講下一句
-                s_id = record_list[len(record_list) - 1]
-                find_condition = {'Sentence_id': {'$gt': s_id}}
-                find_result_cursor = myVerbList.find(find_condition)
-                for i in find_result_cursor:
-                    if i['Contain_keyword']:
-                        record_list.append(i['Sentence_id'])
-                        story_conj = '故事裡還有提到'
-                        response = story_conj + ' ' + i["sentence_Translate"].replace('。', '').replace('，', '').replace(
-                            '！', '').replace('”', '').replace('：', '').replace('“', '')
-                        record_list.append(i['Sentence_id'])
-                        break
+                find_condition = {'Sentence_id': record_list[len(record_list) - 1]}
+                find_result_cursor = myVerbList.find_one(find_condition)
+                story_conj = '故事裡還有提到'
+                response = story_conj + ' ' + find_result_cursor["sentence_Translate"].replace('。', '').replace('，', '').replace(
+                    '！', '').replace('”', '').replace('：', '').replace('“', '')
+                if (record_list[len(record_list) - 1]) not in record_list:
+                    record_list.append(record_list[len(record_list) - 1])
         else:
             # 排序now_index
             now_index = sorted(now_index, reverse=True)
             if now_index[0] > all_cursor.count():
                 response = "看來你對這本書已經很熟悉了呢!"
             else:
-                s_id = now_index[0] + 1
-                find_condition = {'Sentence_id': {'$gt': s_id}}
-                find_result_next = myVerbList.find(find_condition)
-                for i in find_result_next:
-                    if i['Contain_keyword']:
-                        find_common = {'type': 'common_conj'}
-                        find_common_result = myCommonList.find_one(find_common)
-                        story_conj = choice(find_common_result['content'])
-                        response = story_conj + ' ' + i["sentence_Translate"].replace('。', '').replace('，', '').replace(
-                            '！', '').replace('”', '').replace('：', '').replace('“', '')
-                        record_list.append(i['Sentence_id'])
-                        break
+                find_condition = {'Sentence_id': now_index[0] + 1}
+                find_result_next = myVerbList.find_one(find_condition)
+                find_common = {'type': 'common_conj'}
+                find_common_result = myCommonList.find_one(find_common)
+                story_conj = choice(find_common_result['content'])
+                response = story_conj + ' ' + find_result_next["sentence_Translate"].replace('。', '').replace('，', '').replace(
+                    '！', '').replace('”', '').replace('：', '').replace('“', '')
+                if (now_index[0] + 1) not in record_list:
+                    record_list.append(now_index[0] + 1)
 
         find_common = {'type': 'common_repeat'}
         find_common_result = myCommonList.find_one(find_common)
