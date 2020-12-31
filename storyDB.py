@@ -119,7 +119,7 @@ def story_analysis():
     verbInfo = {}
     for i in verbName:
         verbInfo[i] = {"Frequence": verbName.count(i)}
-    # createLibrary.addBookKeyword(story_name, entityInfo, verbInfo)
+    createLibrary.addBookKeyword(story_name, entityInfo, verbInfo)
 
     # 排序entity
     main_entity = []
@@ -157,7 +157,7 @@ def story_analysis():
                     speak_to = counter_speech_ind - 1
 
             counter_speech = True
-            story_2_PhraseList[i] = story_2_PhraseList[i].split('"')[1].split('"')[0]
+            # story_2_PhraseList[i] = story_2_PhraseList[i].split('"')[1].split('"')[0]
         else:
             counter_speech = False
 
@@ -198,7 +198,7 @@ def story_analysis():
             # source = 'en'
             # target = 'zh-TW'
             try:
-                sentence_Translate = [translator.translate(storyPhraseList[i], src="en", dest="zh-TW").text]
+                sentence_Translate = translator.translate(storyPhraseList[i], src="en", dest="zh-TW").text
                 # sentence_Translate = translate_client.translate(
                 #     storyPhraseList[i],
                 #     source_language=source,

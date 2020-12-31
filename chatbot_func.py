@@ -266,6 +266,8 @@ def evaluate(userSay, session_id, time, predictor):
                     word_case.extend([word, word.lower(), word.capitalize(), word.upper()])
                     print(word_case)
                     for index in word_case:
+                        # index是否在storyC1中
+
                         for c1_index in story_c1:
                             if c1_index == index:
                                 checkC1 = True
@@ -328,12 +330,9 @@ def evaluate(userSay, session_id, time, predictor):
                     find_common_result = myCommonList.find_one(find_common)
                     response = choice(find_common_result['content'])
                     repeat_content.append(
-                        choice(all_cursor[similarity_sentence]['sentence_Translate']).replace('。', '').replace('，', '').replace(
+                        all_cursor[similarity_sentence]['sentence_Translate'].replace('。', '').replace('，', '').replace(
                             '！',
-                            '').replace(
-                            '”',
-                            '').replace(
-                            '：', '').replace('“', ''))
+                            ''))
                     state = False
                     createLibrary.addUser('Student ' + user_id, bookName, record_list, match_entity, match_verb, state)
 
@@ -364,11 +363,9 @@ def evaluate(userSay, session_id, time, predictor):
                 find_common_result = myCommonList.find_one(find_common)
                 response = choice(find_common_result['content'])
                 repeat_content.append(
-                    choice(all_cursor[similarity_sentence]['sentence_Translate']).replace('。', '').replace('，', '').replace('！',
-                                                                                                                    '').replace(
-                        '”',
-                        '').replace(
-                        '：', '').replace('“', ''))
+                    all_cursor[similarity_sentence]['sentence_Translate'].replace('。', '').replace('，', '').replace(
+                            '！',
+                            ''))
                 state = False
                 createLibrary.addUser('Student ' + user_id, bookName, record_list, match_entity, match_verb, state)
 
@@ -474,9 +471,7 @@ def repeat(userSay, session_id, time, predictor):
         # elaboration連結回故事ID 並存入故事中的句子作為機器人語料庫
         sentence_id = now_index[0]
         find_story_sentence = {'Sentence_id': sentence_id}
-        now_sentence = myVerbList.find_one(find_story_sentence)['sentence_Translate']
-        now_sentence += [now_user_say]
-        newvalues = {"$set": {'sentence_Translate': now_sentence}}
+        newvalues = {"$set": {'Student_elaboration': now_user_say}}
         myVerbList.update_one(find_story_sentence, newvalues)
 
     if double_check:
@@ -526,17 +521,18 @@ def retrive(userSay, session_id, time, predictor):
                 # 沒有任何故事就直接講第一句
                 find_common = {'type': 'common_prompt_return'}
                 find_common_result = myCommonList.find_one(find_common)
-                response = choice(find_common_result['content']) + ' ' + choice(all_cursor[0]["sentence_Translate"]).replace(
-                    '。', '').replace('，', '').replace('！', '').replace('”', '').replace('：', '').replace('“', '')
+                response = choice(find_common_result['content']) + ' ' + all_cursor[0]["sentence_Translate"].replace('。', '').replace('，', '').replace(
+                            '！',
+                            '')
                 record_list.append(0)
             else:
                 # 依據前次記錄到的句子接續講下一句
                 find_condition = {'Sentence_id': record_list[len(record_list) - 1]}
                 find_result_cursor = myVerbList.find_one(find_condition)
                 story_conj = '故事裡還有提到'
-                response = story_conj + ' ' + choice(find_result_cursor["sentence_Translate"]).replace('。', '').replace('，',
-                                                                                                                '').replace(
-                    '！', '').replace('”', '').replace('：', '').replace('“', '')
+                response = story_conj + ' ' + find_result_cursor["sentence_Translate"].replace('。', '').replace('，', '').replace(
+                            '！',
+                            '')
                 if (record_list[len(record_list) - 1]) not in record_list:
                     record_list.append(record_list[len(record_list) - 1])
         else:
@@ -550,9 +546,9 @@ def retrive(userSay, session_id, time, predictor):
                 find_common = {'type': 'common_conj'}
                 find_common_result = myCommonList.find_one(find_common)
                 story_conj = choice(find_common_result['content'])
-                response = story_conj + ' ' + choice(find_result_next["sentence_Translate"]).replace('。', '').replace('，',
-                                                                                                              '').replace(
-                    '！', '').replace('”', '').replace('：', '').replace('“', '')
+                response = story_conj + ' ' + find_result_next["sentence_Translate"].replace('。', '').replace('，', '').replace(
+                            '！',
+                            '')
                 if (now_index[0] + 1) not in record_list:
                     record_list.append(now_index[0] + 1)
 
