@@ -329,10 +329,18 @@ def evaluate(userSay, session_id, time, predictor):
                     find_common = {'type': 'common_evaluate'}
                     find_common_result = myCommonList.find_one(find_common)
                     response = choice(find_common_result['content'])
-                    repeat_content.append(
-                        all_cursor[similarity_sentence]['sentence_Translate'].replace('。', '').replace('，', '').replace(
-                            '！',
-                            ''))
+
+                    exist_elaboration = myVerbList.find_one(
+                        {"Sentence_id": similarity_sentence, "Student_elaboration": {'$exists': True}})
+                    if exist_elaboration is not None:
+                        # 若有學生曾輸入過的詮釋 > 回答該句
+                        repeat_content.append(all_cursor[similarity_sentence]['Student_elaboration'])
+                    else:
+                        repeat_content.append(
+                            all_cursor[similarity_sentence]['sentence_Translate'].replace('。', '').replace('，',
+                                                                                                           '').replace(
+                                '！',
+                                ''))
                     state = False
                     createLibrary.addUser('Student ' + user_id, bookName, record_list, match_entity, match_verb, state)
 
@@ -362,8 +370,15 @@ def evaluate(userSay, session_id, time, predictor):
                 find_common = {'type': 'common_evaluate'}
                 find_common_result = myCommonList.find_one(find_common)
                 response = choice(find_common_result['content'])
-                repeat_content.append(
-                    all_cursor[similarity_sentence]['sentence_Translate'].replace('。', '').replace('，', '').replace(
+                exist_elaboration = myVerbList.find_one(
+                    {"Sentence_id": similarity_sentence, "Student_elaboration": {'$exists': True}})
+                if exist_elaboration is not None:
+                    # 若有學生曾輸入過的詮釋 > 回答該句
+                    repeat_content.append(all_cursor[similarity_sentence]['Student_elaboration'])
+                else:
+                    repeat_content.append(
+                        all_cursor[similarity_sentence]['sentence_Translate'].replace('。', '').replace('，',
+                                                                                                       '').replace(
                             '！',
                             ''))
                 state = False
@@ -521,18 +536,20 @@ def retrive(userSay, session_id, time, predictor):
                 # 沒有任何故事就直接講第一句
                 find_common = {'type': 'common_prompt_return'}
                 find_common_result = myCommonList.find_one(find_common)
-                response = choice(find_common_result['content']) + ' ' + all_cursor[0]["sentence_Translate"].replace('。', '').replace('，', '').replace(
-                            '！',
-                            '')
+                response = choice(find_common_result['content']) + ' ' + all_cursor[0]["sentence_Translate"].replace(
+                    '。', '').replace('，', '').replace(
+                    '！',
+                    '')
                 record_list.append(0)
             else:
                 # 依據前次記錄到的句子接續講下一句
                 find_condition = {'Sentence_id': record_list[len(record_list) - 1]}
                 find_result_cursor = myVerbList.find_one(find_condition)
                 story_conj = '故事裡還有提到'
-                response = story_conj + ' ' + find_result_cursor["sentence_Translate"].replace('。', '').replace('，', '').replace(
-                            '！',
-                            '')
+                response = story_conj + ' ' + find_result_cursor["sentence_Translate"].replace('。', '').replace('，',
+                                                                                                                '').replace(
+                    '！',
+                    '')
                 if (record_list[len(record_list) - 1]) not in record_list:
                     record_list.append(record_list[len(record_list) - 1])
         else:
@@ -546,9 +563,10 @@ def retrive(userSay, session_id, time, predictor):
                 find_common = {'type': 'common_conj'}
                 find_common_result = myCommonList.find_one(find_common)
                 story_conj = choice(find_common_result['content'])
-                response = story_conj + ' ' + find_result_next["sentence_Translate"].replace('。', '').replace('，', '').replace(
-                            '！',
-                            '')
+                response = story_conj + ' ' + find_result_next["sentence_Translate"].replace('。', '').replace('，',
+                                                                                                              '').replace(
+                    '！',
+                    '')
                 if (now_index[0] + 1) not in record_list:
                     record_list.append(now_index[0] + 1)
 
@@ -714,3 +732,9 @@ def addElaboration(userSay, session_id, time, predictor):
     qa_id += 1
     print(response)
     return response_dict
+
+
+if __name__ == '__main__':
+    connect()
+    t = myCommonList.find_one({"type": "common_start", "test": {'$exists': True}})
+    print(t)
