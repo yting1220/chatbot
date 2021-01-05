@@ -79,6 +79,8 @@ def story_analysis():
                                                                                                           'too !\r\n" a')
     story_2_PhraseList = story_2.split('\r\n')
 
+    print(story_2_PhraseList)
+
     # Dependency Parsing
     predictor = Predictor.from_path(
         "https://storage.googleapis.com/allennlp-public-models/biaffine-dependency-parser-ptb-2020.04.06.tar.gz")
@@ -194,15 +196,8 @@ def story_analysis():
         print('S:' + str(c1_list) + ' V:' + str(v_list) + ' O:' + str(c2_list))
         translator = Translator()
         while True:
-            # translate_client = translate_v2.Client()
-            # source = 'en'
-            # target = 'zh-TW'
             try:
                 sentence_Translate = translator.translate(storyPhraseList[i], src="en", dest="zh-TW").text
-                # sentence_Translate = translate_client.translate(
-                #     storyPhraseList[i],
-                #     source_language=source,
-                #     target_language=target)
                 break
             except Exception as e:
                 print(e)

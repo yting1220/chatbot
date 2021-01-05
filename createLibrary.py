@@ -2,6 +2,7 @@
 import pymongo
 from googletrans import Translator
 import os
+
 os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = 'dict/key.json'
 
 
@@ -29,7 +30,8 @@ def addBook(myBookList):
     bookList = ['Fairy friends']
     translator = Translator()
     for i in range(len(bookList)):
-        book_dict = {'type': '精靈', 'bookName': bookList[i], 'bookNameTranslate': translator.translate(bookList[i], src="en", dest="zh-TW").text}
+        book_dict = {'type': '精靈', 'bookName': bookList[i],
+                     'bookNameTranslate': translator.translate(bookList[i], src="en", dest="zh-TW").text}
         myBookList.insert_one(book_dict)
         print(book_dict)
 
@@ -42,7 +44,7 @@ def addCommon(myCommonList):
     common_prompt = ['可以跟我說說故事裡發生了什麼事嗎？', '可以告訴我故事裡的角色發生了甚麼事嗎？']
     common_evaluate = ['哦~原來如此', '你講得很好呢！', '你說的對~']
     common_follow = ['所以故事裡', '故事裡提到', '所以故事中發生了', '我也有看到故事中說到']
-    common_conj = ['然後', '接下來', '而且', '結果', '接著', '後來']
+    common_conj = ['然後', '接下來', '而且', '接著', '後來']
     common_repeat = ['那接下來又發生了甚麼事呢？']
     # 比對不到 進入Inqurie
     common_prompt_checkO = ['別的小朋友也講過類似的事情，他告訴我', '我有聽過類似的故事', '哦~原來如此']
@@ -73,37 +75,6 @@ def addCommon(myCommonList):
         print(common_dict)
 
 
-def addUserDB(user_id, nowBook_name, messaging, bot_say, record_index_list, keyword, match):
-    # 連接mongo
-    myClient = pymongo.MongoClient("mongodb://localhost:27017/")
-    myBook = myClient[nowBook_name]
-    myUserList = myBook.UserTable
-    # (使用者 書名 機器人說話內容 學生說話內容
-    user_dict = {'user_id': user_id, 'user_say': messaging, 'bot_say': bot_say, 'userRecord': sorted(record_index_list),
-                 'keyword': keyword, 'match': match}
-    myUserList.insert_one(user_dict)
-
-
-def addState(sender_id, nowBook_name, state, feedback, record_index_list):
-    # 連接mongo
-    myClient = pymongo.MongoClient("mongodb://localhost:27017/")
-    myLibrary = myClient.Library
-    myStateList = myLibrary.StateTable
-
-    # (使用者帳號 書名 總句數 學生完成的句子 學生感想
-    if state == 'Finish':
-        user_dict = {'sender_id': sender_id, 'title': nowBook_name, 'state': state,
-                     'userRecord': sorted(record_index_list), 'feedback': feedback}
-    else:
-        if len(record_index_list) != 0:
-            user_dict = {'sender_id': sender_id, 'title': nowBook_name, 'state': state,
-                         'userRecord': sorted(record_index_list)}
-        else:
-            user_dict = {'sender_id': sender_id, 'title': nowBook_name, 'state': state}
-
-    myStateList.insert_one(user_dict)
-
-
 # 新增故事書SVO data
 def addBookInfo(bookName, c1, verb, c2, sentence, sentence_Translate, sentenceID, speaker, speak_to, contain_keyword):
     # 連接mongo
@@ -111,7 +82,9 @@ def addBookInfo(bookName, c1, verb, c2, sentence, sentence_Translate, sentenceID
     myBook = myClient[bookName.replace(' ', '_')]
     myVerbList = myBook.VerbTable
 
-    mydict = {'Sentence_id': sentenceID, 'C1': c1, 'Verb': verb, 'C2': c2, 'Sentence': sentence, 'sentence_Translate': sentence_Translate, 'Speaker': speaker, 'Speak_to': speak_to, 'Contain_keyword': contain_keyword}
+    mydict = {'Sentence_id': sentenceID, 'C1': c1, 'Verb': verb, 'C2': c2, 'Sentence': sentence,
+              'sentence_Translate': sentence_Translate, 'Speaker': speaker, 'Speak_to': speak_to,
+              'Contain_keyword': contain_keyword}
     myVerbList.insert(mydict)
     print(mydict)
 
@@ -134,10 +107,10 @@ def addUser(userId, bookName, record_list, match_entity, match_verb, state):
     myLibrary = myClient.Library
     myUserList = myLibrary.userTable
     bookTalkSummary = {'Sentence_id_list': record_list, 'Entity_list': match_entity,
-                                              'Verb_list': match_verb, 'Finish': state}
+                       'Verb_list': match_verb, 'Finish': state}
 
-    if myUserList.find() is None:
-        #資料庫無資料 > 直接新增一筆
+    if not list(myUserList.find()):
+        # 資料庫無資料 > 直接新增一筆
         mydict = {'User_id': userId, 'BookTalkSummary': {bookName: bookTalkSummary}}
         myUserList.insert(mydict)
         print(mydict)
@@ -145,7 +118,7 @@ def addUser(userId, bookName, record_list, match_entity, match_verb, state):
         find_user = {'User_id': userId}
         now_user = myUserList.find_one(find_user)
         # 若沒有該使用者之資料
-        if now_user is None:
+        if not list(now_user):
             # 直接新增一筆
             mydict = {'User_id': userId, 'BookTalkSummary': {bookName: bookTalkSummary}}
             myUserList.insert(mydict)
@@ -169,7 +142,8 @@ def addDialog(bookName, session_id, dialog_id, speaker_id, content, time):
     myBook = myClient[bookName.replace(' ', '_')]
     allDialog = myBook.S_R_Dialog
 
-    mydict = {'Session_id': session_id, 'Dialog_id': dialog_id, 'Speaker_id': speaker_id, 'Content': content, 'Time': time}
+    mydict = {'Session_id': session_id, 'Dialog_id': dialog_id, 'Speaker_id': speaker_id, 'Content': content,
+              'Time': time}
     allDialog.insert(mydict)
     print(mydict)
 
