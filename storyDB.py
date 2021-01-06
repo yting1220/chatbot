@@ -1,12 +1,9 @@
 # 建立故事內容及關鍵字資料庫
 from allennlp.predictors.predictor import Predictor
 import copy
-# from google.cloud import translate_v2
 from nltk.stem import WordNetLemmatizer
 from googletrans import Translator
-import os
 import createLibrary
-os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = 'dict/key.json'
 
 story_name = "Fairy friends"
 story = 'Lily and Rose liked to help their friends.\r\n Lily saw a bird.\r\n "We can help that bird," she said.\r\n Lily and Rose helped the bird.\r\n Rose saw a cat.\r\n "Now we can help that cat," she said.\r\n Lily and Rose helped the cat.\r\n Lily saw a mouse.\r\n "Now we can help that mouse," she said.\r\n It was not a mouse!\r\n It was Patch, a bad elf.\r\n Patch liked to play tricks.\r\n He had turned into a mouse to trick Lily and Rose.\r\n Rose saw a dog.\r\n "We can help that dog," she said.\r\n Lily and Rose went to help the dog.\r\n It was not a dog.\r\n It was Patch the elf!\r\n He had turned into a dog to trick Lily and Rose.\r\n "Go away, Patch!" said Lily and Rose.\r\n "You are a bad elf!"\r\n Lily saw a fairy.\r\n "We can help that fairy," she said.\r\n "That is not a fairy," said Rose.\r\n "It is Patch. Go away, Patch, you bad elf!"\r\n They saw the fairy, and they saw Patch, too!\r\n "It IS a fairy," said Rose.\r\n "We can help you," said Lily.\r\n Lily and Rose helped the fairy.\r\n Patch turned into a bird and he helped, too.\r\n The fairy was Lily and Rose\'s new friend.\r\n Now Patch was their friend, too.\r\n '

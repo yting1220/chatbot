@@ -1,5 +1,6 @@
-from flask import Flask, request, jsonify
 from allennlp.predictors.predictor import Predictor
+from flask import Flask, request, jsonify
+
 import chatbot_func
 
 app = Flask(__name__)

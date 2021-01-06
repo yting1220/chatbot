@@ -1,9 +1,6 @@
 # 建立通用句及書單資料庫
 import pymongo
 from googletrans import Translator
-import os
-
-os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = 'dict/key.json'
 
 
 def connect():
@@ -42,6 +39,7 @@ def addCommon(myCommonList):
     common_start_checkO = ['真巧！我剛好也看過這本書耶！', '我也看過這本書呢！']
     common_start_checkX = ['這本書我還沒看過欸，你想聊聊其他的書嗎？', '我好像沒看過這本書，你還有其他書可以跟我分享嗎？']
     common_prompt = ['可以跟我說說故事裡發生了什麼事嗎？', '可以告訴我故事裡的角色發生了甚麼事嗎？']
+    common_prompt_secondLogin = ['那之後還發生了甚麼事呢？', '接下來故事中還提到了甚麼呢？', '你可以在告訴我之後的故事嗎？']
     common_evaluate = ['哦~原來如此', '你講得很好呢！', '你說的對~']
     common_follow = ['所以故事裡', '故事裡提到', '所以故事中發生了', '我也有看到故事中說到']
     common_conj = ['然後', '接下來', '而且', '接著', '後來']
@@ -58,12 +56,12 @@ def addCommon(myCommonList):
     common_expand_chatbot = ['我對這本書的感想是', '讀過這本書的小朋友的感想是']
     common_expand_chatbot_O = ['那我推薦你這本書，他也是屬於XX類型的書！', '讓我也推薦給你一本XX的書！']
     common_expand_chatbot_X = ['那我推薦你這本書']
-    common = [common_start, common_start_checkO, common_start_checkX, common_prompt, common_evaluate, common_follow,
+    common = [common_start, common_start_checkO, common_start_checkX, common_prompt, common_prompt_secondLogin, common_evaluate, common_follow,
               common_conj, common_repeat, common_prompt_checkO, common_prompt_checkX, common_prompt_return,
               common_inqurie_new, common_grow_check,
               common_prompt_duplicate, common_expand_student, common_expand_chatbot, common_expand_chatbot_O,
               common_expand_chatbot_X]
-    common_type = ["common_start", "common_start_checkO", "common_start_checkX", "common_prompt", "common_evaluate",
+    common_type = ["common_start", "common_start_checkO", "common_start_checkX", "common_prompt", "common_prompt_secondLogin", "common_evaluate",
                    "common_follow", "common_conj", "common_repeat", "common_prompt_checkO", "common_prompt_checkX",
                    "common_prompt_return", "common_inqurie_new", "common_grow_check", "common_prompt_duplicate",
                    "common_expand_student",
