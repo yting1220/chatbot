@@ -35,14 +35,17 @@ def addBook(myBookList):
 
 def addCommon(myCommonList):
     # 新增通用句
+    common_combine = [' 還有 ', ' 和 ', ' 跟 ', ' 然後 ']
+    common_bookRecord = ['之前我們有讀過X的故事喔，現在你想聊聊哪本書呢', '我記得你有跟我分享過X的故事喔，這次你想聊聊哪本書呢']
     common_start = ['哈囉~你今天看了哪本書呢？', '你想跟我聊哪本書呢？', 'Hi~今天有甚麼有趣的故事書呢？']
     common_start_checkO = ['真巧！我剛好也看過這本書耶！', '我也看過這本書呢！']
     common_start_checkX = ['這本書我還沒看過欸，你想聊聊其他的書嗎？', '我好像沒看過這本書，你還有其他書可以跟我分享嗎？']
+    common_book_second = ['我記得這本書!上次我們有說到', '我記得上次你有告訴我', '我記得這個故事喔!上次我們有聊到故事中提到']
     common_prompt = ['可以跟我說說故事裡發生了什麼事嗎？', '可以告訴我故事裡的角色發生了甚麼事嗎？']
-    common_prompt_secondLogin = ['那之後還發生了甚麼事呢？', '接下來故事中還提到了甚麼呢？', '你可以再告訴我之後的故事嗎？']
+    common_prompt_secondLogin = ['那之後還發生了甚麼事呢？', '接下來故事中還提到了甚麼呢？', '你可以再告訴我之後的故事嗎？', '你能再跟我分享接下來的故事嗎?']
     common_evaluate = ['哦~原來如此', '你講得很好呢！', '你說的對~']
     common_follow = ['所以故事裡', '故事裡提到', '所以故事中發生了', '我也有看到故事中說到']
-    common_conj = ['然後', '接下來', '而且', '接著', '後來']
+    common_conj = [' 然後 ', ' 接下來 ', ' 而且 ', ' 接著 ', ' 後來 ']
     common_repeat = ['那接下來又發生了甚麼事呢？']
     # 比對不到 進入Inqurie
     common_prompt_checkO = ['別的小朋友也講過類似的事情，他告訴我', '我有聽過類似的故事', '哦~原來如此']
@@ -56,12 +59,12 @@ def addCommon(myCommonList):
     common_expand_chatbot = ['我對這本書的感想是', '讀過這本書的小朋友的感想是']
     common_expand_chatbot_O = ['那我推薦你這本書，他也是屬於XX類型的書！', '讓我也推薦給你一本XX的書！']
     common_expand_chatbot_X = ['那我推薦你這本書']
-    common = [common_start, common_start_checkO, common_start_checkX, common_prompt, common_prompt_secondLogin, common_evaluate, common_follow,
+    common = [common_combine, common_bookRecord, common_start, common_start_checkO, common_start_checkX, common_book_second, common_prompt, common_prompt_secondLogin, common_evaluate, common_follow,
               common_conj, common_repeat, common_prompt_checkO, common_prompt_checkX, common_prompt_return,
               common_inqurie_new, common_grow_check,
               common_prompt_duplicate, common_expand_student, common_expand_chatbot, common_expand_chatbot_O,
               common_expand_chatbot_X]
-    common_type = ["common_start", "common_start_checkO", "common_start_checkX", "common_prompt", "common_prompt_secondLogin", "common_evaluate",
+    common_type = ["common_combine", "common_bookRecord", "common_start", "common_start_checkO", "common_start_checkX", "common_book_second", "common_prompt", "common_prompt_secondLogin", "common_evaluate",
                    "common_follow", "common_conj", "common_repeat", "common_prompt_checkO", "common_prompt_checkX",
                    "common_prompt_return", "common_inqurie_new", "common_grow_check", "common_prompt_duplicate",
                    "common_expand_student",
