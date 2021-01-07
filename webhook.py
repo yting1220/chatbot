@@ -1,7 +1,11 @@
 from allennlp.predictors.predictor import Predictor
 from flask import Flask, request, jsonify
+from nltk.corpus import wordnet as wn
+import nltk
 
 import chatbot_func
+
+predictor: object
 
 app = Flask(__name__)
 
@@ -23,6 +27,8 @@ def webhook():
 
 
 if __name__ == "__main__":
+    wn._morphy("test", pos='v')
+    nltk.download('stopwords')
     predictor = Predictor.from_path(
         "https://storage.googleapis.com/allennlp-public-models/biaffine-dependency-parser-ptb-2020.04.06.tar.gz")
     app.run(debug=True, port=8888)

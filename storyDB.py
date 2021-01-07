@@ -47,7 +47,6 @@ def coReference():
             #
             # print("story_list", end=':')
             # print(content_list[j[0]])
-
             if j[0] == j[1]:
                 content_list[j[0]] = temp
 
@@ -182,7 +181,7 @@ def story_analysis():
             if result['pos'][j] == 'VERB' and result['predicted_dependencies'][j] != 'aux':
                 v = True
                 if result['words'][j] not in v_list:
-                    v_list.append(result['words'][j])
+                    v_list.append(result['words'][j].lower())
                 continue
             if v == True and (result['pos'][j] == 'PROPN' or result['pos'][j] == 'NOUN'):
                 if result['words'][j] not in c2_list:
