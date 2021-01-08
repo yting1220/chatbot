@@ -8,17 +8,20 @@ import createLibrary
 story_name = "Fairy friends"
 story = 'Lily and Rose liked to help their friends.\r\n Lily saw a bird.\r\n "We can help that bird," she said.\r\n Lily and Rose helped the bird.\r\n Rose saw a cat.\r\n "Now we can help that cat," she said.\r\n Lily and Rose helped the cat.\r\n Lily saw a mouse.\r\n "Now we can help that mouse," she said.\r\n It was not a mouse!\r\n It was Patch, a bad elf.\r\n Patch liked to play tricks.\r\n He had turned into a mouse to trick Lily and Rose.\r\n Rose saw a dog.\r\n "We can help that dog," she said.\r\n Lily and Rose went to help the dog.\r\n It was not a dog.\r\n It was Patch the elf!\r\n He had turned into a dog to trick Lily and Rose.\r\n "Go away, Patch!" said Lily and Rose.\r\n "You are a bad elf!"\r\n Lily saw a fairy.\r\n "We can help that fairy," she said.\r\n "That is not a fairy," said Rose.\r\n "It is Patch. Go away, Patch, you bad elf!"\r\n They saw the fairy, and they saw Patch, too!\r\n "It IS a fairy," said Rose.\r\n "We can help you," said Lily.\r\n Lily and Rose helped the fairy.\r\n Patch turned into a bird and he helped, too.\r\n The fairy was Lily and Rose\'s new friend.\r\n Now Patch was their friend, too.\r\n '
 content_list = []
+content_list2 = []
+words = ''
 
 
 def coReference():
-    global content_list
+    global content_list, words, content_list2
     # 紀錄每個角色出現次數
-    characterCount = []
-    tempMax = 0
-    tempProtagonist = ''
+    # tempMax = 0
+    # tempProtagonist = ''
 
-    # Co-reference
-    content = story.replace('\r\n', '')
+    f = open("story/Fairy friends.txt", mode='r')
+    words = f.read()
+    f.close()
+    content = words.replace('\n', ' ')
     predictor = Predictor.from_path(
         "https://storage.googleapis.com/allennlp-public-models/coref-spanbert-large-2020.02.27.tar.gz")
     result_1 = predictor.predict(
@@ -31,31 +34,26 @@ def coReference():
     # 找出代名詞對應主詞 修改原文
     for i in range(len(result['clusters'])):
         count = 0
-        characterCount.append([])
         temp = ' '.join(result['document'][result['clusters'][i][0][0]:result['clusters'][i][0][1] + 1])
-
         # 額外處理
         if story_name == "Fairy friends" and temp == 'Patch , a bad elf':
             temp = 'Patch'
-
         # print(temp)
 
         for j in result['clusters'][i]:
             count += 1
             # print(str(j) + ":" + str(result['document'][j[0]:j[1] + 1]), end=',')
             # print(' '.join(result['document'][j[0]:j[1] + 1]))
-            #
             # print("story_list", end=':')
             # print(content_list[j[0]])
             if j[0] == j[1]:
                 content_list[j[0]] = temp
-
-        if count > tempMax:
-            tempMax = count
-            tempProtagonist = temp
-
-    #     print("出現次數：" + str(count), end='\r\n\r\n')
+        # 計算出現次數
+    #     if count > tempMax:
+    #         tempMax = count
+    #         tempProtagonist = temp
     #
+    #     print("出現次數：" + str(count), end='\r\n\r\n')
     # print('主角出現'+str(tempMax) + "次：" + tempProtagonist + '\n')
 
 
@@ -63,8 +61,7 @@ def story_analysis():
     coReference()
     contain_keyword = False
 
-    storyPhraseList = story.split('\r\n ')
-    storyPhraseList.remove('')
+    storyPhraseList = words.split('\n')
 
     story_2 = ' '.join(content_list)
     story_2 = story_2.replace(' . ', ' . \r\n')
@@ -74,7 +71,7 @@ def story_analysis():
             'Patch . \r\nGo away', 'Patch . Go away').replace('elf ! " Lily', 'elf ! " \r\nLily').replace('too ! " a',
                                                                                                           'too !\r\n" a')
     story_2_PhraseList = story_2.split('\r\n')
-
+    story_2_PhraseList.pop()
     print(story_2_PhraseList)
 
     # Dependency Parsing
@@ -96,14 +93,14 @@ def story_analysis():
         result = predictor.predict(
             sentence=sentence
         )
-        # print(sentence)
         for j in range(len(result['pos'])):
             if v == False and (result['pos'][j] == 'PROPN' or result['pos'][j] == 'NOUN'):
                 entityName.append(result['words'][j])
                 continue
             if result['pos'][j] == 'VERB' and result['predicted_dependencies'][j] != 'aux':
                 v = True
-                verbName.append(wnl.lemmatize(result['words'][j], 'v'))
+                word = wnl.lemmatize(result['words'][j], 'v')
+                verbName.append(word.lower())
                 continue
             if v == True and (result['pos'][j] == 'PROPN' or result['pos'][j] == 'NOUN'):
                 entityName.append(result['words'][j])
@@ -194,6 +191,14 @@ def story_analysis():
         while True:
             try:
                 sentence_Translate = translator.translate(storyPhraseList[i], src="en", dest="zh-TW").text
+                # 額外處理翻譯問題
+                if story_name == "Fairy friends":
+                    missing_patch = ['補丁', '帕奇']
+                    missing_fairy = ['仙女', '童話']
+                    for word in missing_patch:
+                        sentence_Translate = sentence_Translate.replace(word, 'Patch')
+                    for word in missing_fairy:
+                        sentence_Translate = sentence_Translate.replace(word, '精靈')
                 break
             except Exception as e:
                 print(e)

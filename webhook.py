@@ -5,8 +5,6 @@ import nltk
 
 import chatbot_func
 
-predictor: object
-
 app = Flask(__name__)
 
 
