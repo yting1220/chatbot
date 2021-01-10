@@ -2,7 +2,6 @@ from allennlp.predictors.predictor import Predictor
 from flask import Flask, request, jsonify
 from nltk.corpus import wordnet as wn
 import nltk
-
 import chatbot_func
 
 app = Flask(__name__)
@@ -11,15 +10,14 @@ app = Flask(__name__)
 @app.route('/', methods=['POST'])
 def webhook():
     req = request.get_json()
-    userSay = req['intent']['query']
-    time = req['user']['lastSeenTime']
-    session_id = req['session']['id']
     print(req)
-
     try:
-        response_dict = getattr(chatbot_func, req['handler']['name'])(userSay, session_id, time, predictor)
+        if req['handler']['name'] == 'evaluate':
+            response_dict = getattr(chatbot_func, req['handler']['name'])(req, predictor)
+        else:
+            response_dict = getattr(chatbot_func, req['handler']['name'])(req)
     except TypeError:
-        response_dict = getattr(chatbot_func, req['handler']['name'])(req)
+        response_dict = getattr(chatbot_func, req['handler']['name'])()
 
     return jsonify(response_dict)
 

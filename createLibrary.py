@@ -1,41 +1,43 @@
 # 建立通用句及書單資料庫
+import copy
+
 import pymongo
 from googletrans import Translator
+myClient: object
+myClientData: object
+myBookList: object
+myCommonList: object
 
 
 def connect():
+    global myClient, myClientData, myBookList, myCommonList
     try:
         # 連接mongo
         myclient = pymongo.MongoClient("mongodb://localhost:27017/")
 
-        myLibrary = myclient.Library
-        myBookList = myLibrary.bookList
-        myCommonList = myLibrary.commonList
-
-        myBookList.delete_many({})
-        myCommonList.delete_many({})
-
-        addBook(myBookList)
-        addCommon(myCommonList)
-
+        myClientData = myclient.client_data
+        myBookList = myClientData.bookList
+        myCommonList = myClientData.commonList
     except Exception as e:
         print(e)
+    return myBookList, myCommonList
 
 
-def addBook(myBookList):
+def addBook(bookName, bookType):
+    connect()
     # 新增書單
-    bookList = ['Fairy friends']
     translator = Translator()
-    for i in range(len(bookList)):
-        book_dict = {'type': '精靈', 'bookName': bookList[i],
-                     'bookNameTranslate': translator.translate(bookList[i], src="en", dest="zh-TW").text}
-        myBookList.insert_one(book_dict)
-        print(book_dict)
+    book_dict = {'type': bookType, 'bookName': bookName,
+                 'bookNameTranslate': translator.translate(bookName, src="en", dest="zh-TW").text}
+    myBookList.insert_one(book_dict)
+    print(book_dict)
 
 
-def addCommon(myCommonList):
+def addCommon():
+    connect()
+    myCommonList.delete_many({})
     # 新增通用句
-    common_combine = [' 還有 ', ' 和 ', ' 跟 ', ' 然後 ']
+    common_combine = [' 還有 ', ' 和 ', ' 跟 ']
     common_bookRecord = ['之前我們有讀過X的故事喔，現在你想聊聊哪本書呢', '我記得你有跟我分享過X的故事喔，這次你想聊聊哪本書呢']
     common_start = ['哈囉~你今天看了哪本書呢？', '你想跟我聊哪本書呢？', 'Hi~今天有甚麼有趣的故事書呢？']
     common_start_checkO = ['真巧！我剛好也看過這本書耶！', '我也看過這本書呢！']
@@ -105,8 +107,8 @@ def addUser(userId, bookName, record_list, match_entity, match_verb, state):
     # 連接mongo
 
     myClient = pymongo.MongoClient("mongodb://localhost:27017/")
-    myLibrary = myClient.Library
-    myUserList = myLibrary.userTable
+    myClientData = myClient.client_data
+    myUserList = myClientData.userTable
     bookTalkSummary = {'Sentence_id_list': record_list, 'Entity_list': match_entity,
                        'Verb_list': match_verb, 'Finish': state}
 
@@ -114,7 +116,6 @@ def addUser(userId, bookName, record_list, match_entity, match_verb, state):
         # 資料庫無資料 > 直接新增一筆
         mydict = {'User_id': userId, 'BookTalkSummary': {bookName: bookTalkSummary}}
         myUserList.insert(mydict)
-        print(mydict)
     else:
         find_user = {'User_id': userId}
         now_user = myUserList.find_one(find_user)
@@ -123,7 +124,6 @@ def addUser(userId, bookName, record_list, match_entity, match_verb, state):
             # 直接新增一筆
             mydict = {'User_id': userId, 'BookTalkSummary': {bookName: bookTalkSummary}}
             myUserList.insert(mydict)
-            print(mydict)
         # 有該使用者資料
         else:
             if bookName in now_user['BookTalkSummary']:
@@ -132,10 +132,9 @@ def addUser(userId, bookName, record_list, match_entity, match_verb, state):
                 myUserList.update_one(find_user, newvalues)
             else:
                 # 同一筆資料下新增key值
-                temp = now_user['BookTalkSummary']
-                temp[bookName] = bookTalkSummary
-                newvalues = {"$set": {'BookTalkSummary': temp}}
-                myUserList.update_one(find_user, newvalues)
+                user_book_result = copy.deepcopy(now_user)
+                user_book_result['BookTalkSummary'].update({bookName: bookTalkSummary})
+                myUserList.update_one(find_user, {"$set": user_book_result})
 
 
 def addDialog(bookName, session_id, dialog_id, speaker_id, content, time):
@@ -170,4 +169,4 @@ def addElaboration(bookName, qa_id, elaboration, confidence, sentence_id):
 
 
 if __name__ == "__main__":
-    connect()
+    addCommon()
