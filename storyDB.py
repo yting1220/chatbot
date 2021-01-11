@@ -4,15 +4,16 @@ import copy
 from nltk.stem import WordNetLemmatizer
 from googletrans import Translator
 import createLibrary
-
-story_name = "Fairy friends"
+# 目前書單 >> "Fairy friends": "精靈", "Sleeping Beauty": "公主"
+story_name = "Sleeping Beauty"
+story_type = "公主"
 content_list = []
-words = ''
+words = []
 
 
 def createStory():
     global words
-    createLibrary.addBook(story_name, '公主')
+    createLibrary.addBook(story_name, story_type)
     path = "story/" + story_name + ".txt"
     f = open(path, mode='r')
     words = f.read()
@@ -38,11 +39,11 @@ def coReference():
     # 找出代名詞對應主詞 修改原文
     for i in range(len(result['clusters'])):
         count = 0
-        temp = ' '.join(result['document'][result['clusters'][i][0][0]:result['clusters'][i][0][1] + 1])
+        temp_name = ' '.join(result['document'][result['clusters'][i][0][0]:result['clusters'][i][0][1] + 1])
         # 額外處理
-        if story_name == "Fairy friends" and temp == 'Patch , a bad elf':
-            temp = 'Patch'
-        # print(temp)
+        if story_name == "Fairy friends" and temp_name == 'Patch , a bad elf':
+            temp_name = 'Patch'
+        # print(temp_name)
 
         for j in result['clusters'][i]:
             count += 1
@@ -51,11 +52,11 @@ def coReference():
             # print("story_list", end=':')
             # print(content_list[j[0]])
             if j[0] == j[1]:
-                content_list[j[0]] = temp
+                content_list[j[0]] = temp_name
         # 計算出現次數
     #     if count > tempMax:
     #         tempMax = count
-    #         tempProtagonist = temp
+    #         tempProtagonist = temp_name
     #
     #     print("出現次數：" + str(count), end='\r\n\r\n')
     # print('主角出現'+str(tempMax) + "次：" + tempProtagonist + '\n')
@@ -76,7 +77,6 @@ def story_analysis():
                                                                                                           'too !\r\n" a')
     if story_name == "Sleeping Beauty":
         story_2 = story_2.replace('die . \r\na', 'die . a').replace('years . \r\n"', 'years . " \r\n')
-    print(story_2)
     story_2_PhraseList = story_2.split('\r\n')
     print(story_2_PhraseList)
 
@@ -111,7 +111,6 @@ def story_analysis():
             if v == True and (result['pos'][j] == 'PROPN' or result['pos'][j] == 'NOUN'):
                 entityName.append(result['words'][j])
                 continue
-
     entityInfo = {}
     sort_entity = {}
     for i in entityName:
@@ -122,14 +121,13 @@ def story_analysis():
         verbInfo[i] = {"Frequence": verbName.count(i)}
     createLibrary.addBookKeyword(story_name, entityInfo, verbInfo)
 
-    # 排序entity
+    # 排序entity 判斷出現次數高者為主要角色
     main_entity = []
     sort_entity = sorted(sort_entity.items(), key=lambda x: x[1], reverse=True)
     temp = int(len(sort_entity)*0.3)
     for i in sort_entity[:temp]:
         main_entity.append(i[0])
 
-    # 抓出主要SVO
     for i in range(len(story_2_PhraseList)):
         speaker = ''
         speak_to = ''
@@ -142,6 +140,9 @@ def story_analysis():
                     speaker = temp[(len(story_2_PhraseList[i].split(' ')) - 6)] + ' and ' + temp[(len(story_2_PhraseList[i].split(' ')) - 4)]
                 else:
                     speaker = temp[(len(story_2_PhraseList[i].split(' ')) - 4)]
+                # 改寫原句 將對話句子的說話者代名詞改為角色名稱
+                temp_phrase = storyPhraseList[i].split('" ')[1].split(' said')[0]
+                storyPhraseList[i] = storyPhraseList[i].replace(" "+temp_phrase+" ", speaker)
             elif story_2_PhraseList[i].replace(' .', '').endswith('" '):
                 speaker = ''
             else:
@@ -174,6 +175,7 @@ def story_analysis():
             sentence=sentence
         )
         print(sentence)
+        # 抓出主要SVO
         for j in range(len(result['pos'])):
             if v == False and (result['pos'][j] == 'PROPN' or result['pos'][j] == 'NOUN'):
                 if result['words'][j] not in c1_list:
@@ -209,12 +211,6 @@ def story_analysis():
             except Exception as e:
                 print(e)
 
-        if len(c1_list) == 0:
-            c1_list = ''
-        if len(c2_list) == 0:
-            c2_list = ''
-        if len(v_list) == 0:
-            v_list = ''
         createLibrary.addBookInfo(story_name, c1_list, v_list, c2_list, story_2_PhraseList[i], sentence_Translate, i, speaker, speak_to, contain_keyword)
         contain_keyword = False
         print()
