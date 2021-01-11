@@ -39,13 +39,14 @@ def addCommon():
     # 新增通用句
     common_combine = [' 還有 ', ' 和 ', ' 跟 ']
     common_bookRecord = ['之前我們有讀過X的故事喔，現在你想聊聊哪本書呢', '我記得你有跟我分享過X的故事喔，這次你想聊聊哪本書呢']
+    commom_book_finish = ['上次我們聊過這本書囉~你想再跟我分享哪本新的故事呢？', '上次你跟我分享過這本書囉~你想聊聊哪本新的故事呢？']
     common_start = ['哈囉~你今天看了哪本書呢？', '你想跟我聊哪本書呢？', 'Hi~今天有甚麼有趣的故事書呢？']
     common_start_checkO = ['真巧！我剛好也看過這本書耶！', '我也看過這本書呢！']
     common_start_checkX = ['這本書我還沒看過欸，你想聊聊其他的書嗎？', '我好像沒看過這本書，你還有其他書可以跟我分享嗎？']
     common_book_second = ['我記得這本書!上次我們有說到', '我記得上次你有告訴我', '我記得這個故事喔!上次我們有聊到故事中提到']
     common_prompt = ['可以跟我說說故事裡發生了什麼事嗎？', '可以告訴我故事裡的角色發生了甚麼事嗎？']
     common_prompt_secondLogin = ['那之後還發生了甚麼事呢？', '接下來故事中還提到了甚麼呢？', '你可以再告訴我之後的故事嗎？', '你能再跟我分享接下來的故事嗎?']
-    common_evaluate = ['哦~原來如此', '你講得很好呢！', '你說的對~']
+    common_evaluate = ['哦~原來如此', '你講得很好呢！', '你說的對~', '你說的很好唷~']
     common_follow = ['所以故事裡', '故事裡提到', '所以故事中發生了', '我也有看到故事中說到']
     common_conj = [' 然後 ', ' 接下來 ', ' 而且 ', ' 接著 ', ' 後來 ']
     common_repeat = ['那接下來又發生了甚麼事呢？']
@@ -57,20 +58,19 @@ def addCommon():
     common_inqurie_new = ['哦哦哦我知道了~', '原來如此~我了解了']
     common_grow_check = ['你的意思是指X嗎', '你是要說X嗎', '你是在說X嗎']
     common_prompt_duplicate = ['你剛剛說過一樣的故事了唷']
+    common_expand = ["看來你對這本書已經很熟悉了呢!我們來聊聊你的心得吧", "你很了解這個故事呢!那可以跟我分享你的心得嗎~", "你對這本書很熟悉呢!那我們來說說你對故事的心得吧"]
     common_expand_student = ['你喜歡這本書嗎？', '你喜歡書裡的哪個部份呢？', '你覺得這本書怎麼樣？']
     common_expand_chatbot = ['我對這本書的感想是', '讀過這本書的小朋友的感想是']
     common_expand_chatbot_O = ['那我推薦你這本書，他也是屬於XX類型的書！', '讓我也推薦給你一本XX的書！']
     common_expand_chatbot_X = ['那我推薦你這本書']
-    common = [common_combine, common_bookRecord, common_start, common_start_checkO, common_start_checkX, common_book_second, common_prompt, common_prompt_secondLogin, common_evaluate, common_follow,
+    common = [common_combine, common_bookRecord, commom_book_finish, common_start, common_start_checkO, common_start_checkX, common_book_second, common_prompt, common_prompt_secondLogin, common_evaluate, common_follow,
               common_conj, common_repeat, common_prompt_checkO, common_prompt_checkX, common_prompt_return,
-              common_inqurie_new, common_grow_check,
-              common_prompt_duplicate, common_expand_student, common_expand_chatbot, common_expand_chatbot_O,
+              common_inqurie_new, common_grow_check, common_prompt_duplicate, common_expand, common_expand_student, common_expand_chatbot, common_expand_chatbot_O,
               common_expand_chatbot_X]
-    common_type = ["common_combine", "common_bookRecord", "common_start", "common_start_checkO", "common_start_checkX", "common_book_second", "common_prompt", "common_prompt_secondLogin", "common_evaluate",
+    common_type = ["common_combine", "common_bookRecord", "commom_book_finish", "common_start", "common_start_checkO", "common_start_checkX", "common_book_second", "common_prompt", "common_prompt_secondLogin", "common_evaluate",
                    "common_follow", "common_conj", "common_repeat", "common_prompt_checkO", "common_prompt_checkX",
                    "common_prompt_return", "common_inqurie_new", "common_grow_check", "common_prompt_duplicate",
-                   "common_expand_student",
-                   "common_expand_chatbot", "common_expand_chatbot_O", "common_expand_chatbot_X"]
+                   "common_expand", "common_expand_student", "common_expand_chatbot", "common_expand_chatbot_O", "common_expand_chatbot_X"]
 
     for i in range(len(common)):
         common_dict = {'type': common_type[i], 'content': common[i]}
@@ -103,7 +103,7 @@ def addBookKeyword(bookName, entityList, verbList):
     print(mydict)
 
 
-def addUser(userId, bookName, record_list, match_entity, match_verb, state):
+def updateUser(userId, bookName, record_list, match_entity, match_verb, state):
     # 連接mongo
 
     myClient = pymongo.MongoClient("mongodb://localhost:27017/")
@@ -128,8 +128,11 @@ def addUser(userId, bookName, record_list, match_entity, match_verb, state):
         else:
             if bookName in now_user['BookTalkSummary']:
                 # 有該本書之資料 > 更新內容
-                newvalues = {"$set": {'BookTalkSummary': {bookName: bookTalkSummary}}}
-                myUserList.update_one(find_user, newvalues)
+                user_book_result = copy.deepcopy(now_user)
+                for book_data in user_book_result['BookTalkSummary'].keys():
+                    if book_data == bookName:
+                        user_book_result['BookTalkSummary'][book_data] = bookTalkSummary
+                myUserList.update_one(find_user, {"$set": user_book_result})
             else:
                 # 同一筆資料下新增key值
                 user_book_result = copy.deepcopy(now_user)

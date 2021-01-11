@@ -112,6 +112,7 @@ def check_book(req):
     userSay = req['intent']['query']
     time = req['user']['lastSeenTime']
     session_id = req['session']['id']
+    check_noMatch = False
     connect()
 
     if is_all_chinese(userSay):
@@ -145,18 +146,6 @@ def check_book(req):
         createLibrary.addDialog(bookName, session_id, dialog_id, 'chatbot', response, time)
         dialog_id += 1
 
-        response_dict = {"prompt": {
-            "firstSimple": {
-                "speech": response,
-                "text": response
-            }},
-            "scene": {
-                "next": {
-                    'name': 'Prompt'
-                }
-            }
-        }
-
         # 取得書本紀錄
         if list(myUserList.find()):
             user_data_load = myUserList.find_one({"User_id": 'Student ' + user_id})
@@ -164,19 +153,15 @@ def check_book(req):
             if bookName in user_data_load["BookTalkSummary"].keys():
                 # 書本狀態紀錄為已完成
                 if user_data_load["BookTalkSummary"][bookName]["Finish"]:
-                    response = '上次我們聊過這本書囉~你有看到新的書可以跟我分享嗎？'
-                    response_dict = {"prompt": {
-                        "firstSimple": {
-                            "speech": response,
-                            "text": response
-                        }}
-                    }
+                    find_condition = {'type': 'commom_book_finish'}
+                    find_result = myCommonList.find_one(find_condition)
+                    response = choice(find_result['content'])
+                    check_noMatch = True
                 else:
                     # 抓出過去的故事資料
                     record_list = user_data_load["BookTalkSummary"][bookName]["Sentence_id_list"]
                     match_entity = user_data_load["BookTalkSummary"][bookName]["Entity_list"]
                     match_verb = user_data_load["BookTalkSummary"][bookName]["Verb_list"]
-
                     result = ''
                     second_login = True
                     if len(record_list) > 1:
@@ -198,18 +183,6 @@ def check_book(req):
                     find_common_result = myCommonList.find_one(find_common)
                     response = choice(find_common_result['content']) + result
 
-                    response_dict = {"prompt": {
-                        "firstSimple": {
-                            "speech": response,
-                            "text": response
-                        }},
-                        "scene": {
-                            "next": {
-                                'name': 'Prompt'
-                            }
-                        }
-                    }
-
         # 記錄對話過程
         createLibrary.addDialog(bookName, session_id, dialog_id, 'chatbot', response, time)
         dialog_id += 1
@@ -218,13 +191,27 @@ def check_book(req):
         find_common = {'type': 'common_start_checkX'}
         find_common_result = myCommonList.find_one(find_common)
         response = choice(find_common_result['content'])
+        check_noMatch = True
 
+    if check_noMatch:
         response_dict = {"prompt": {
             "firstSimple": {
                 "speech": response,
                 "text": response
             }
         }}
+    else:
+        response_dict = {"prompt": {
+            "firstSimple": {
+                "speech": response,
+                "text": response
+            }},
+            "scene": {
+                "next": {
+                    'name': 'Prompt'
+                }
+            }
+        }
 
     print(response)
     return response_dict
@@ -524,7 +511,6 @@ def evaluate(req, predictor):
                 for word in ['。', '，', '！']:
                     result = result.replace(word, ' ')
                 repeat_content.append(result)
-            createLibrary.addUser('Student ' + user_id, bookName, record_list, match_entity, match_verb, state)
 
             # 記錄對話過程
             createLibrary.addDialog(bookName, session_id, dialog_id, 'chatbot', response, time)
@@ -614,7 +600,6 @@ def repeat(req):
     global dialog_id, double_check
     time = req['user']['lastSeenTime']
     session_id = req['session']['id']
-    createLibrary.addUser('Student ' + user_id, bookName, record_list, match_entity, match_verb, state)
     response = ''
     if len(repeat_content) > 1:
         for i in repeat_content:
@@ -667,12 +652,20 @@ def retrive(req):
     if record_list[-1] == (all_cursor.count() - 1):
         # 講到最後一句
         state = True
-        response = "看來你對這本書已經很熟悉了呢!"
+        find_common = {'type': 'common_expand'}
+        find_common_result = myCommonList.find_one(find_common)
+        response = "\n"+choice(find_common_result['content'])
+        createLibrary.updateUser('Student ' + user_id, bookName, record_list, match_entity, match_verb, state)
         response_dict = {"prompt": {
             "firstSimple": {
                 "speech": response,
                 "text": response
-            }}
+            }},
+            "scene": {
+                "next": {
+                    'name': 'Expand'
+                }
+            }
         }
     else:
         if len(now_index) == 0:
@@ -736,6 +729,7 @@ def retrive(req):
     dialog_id += 1
 
     print(response)
+    createLibrary.updateUser('Student ' + user_id, bookName, record_list, match_entity, match_verb, state)
     return response_dict
 
 
@@ -886,6 +880,28 @@ def addElaboration(req):
     }
 
     qa_id += 1
+    print(response)
+    return response_dict
+
+
+# 學生心得回饋
+def expand(req):
+    print("Expand")
+    global dialog_id
+    time = req['user']['lastSeenTime']
+    session_id = req['session']['id']
+    find_common = {'type': 'common_expand_student'}
+    find_common_result = myCommonList.find_one(find_common)
+    response = choice(find_common_result['content'])
+    response_dict = {"prompt": {
+        "firstSimple": {
+            "speech": response,
+            "text": response
+        }}
+    }
+    # 記錄對話過程
+    createLibrary.addDialog(bookName, session_id, dialog_id, 'chatbot', response, time)
+    dialog_id += 1
     print(response)
     return response_dict
 
