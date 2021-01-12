@@ -4,7 +4,6 @@ from nltk.corpus import wordnet as wn
 from nltk.corpus import stopwords
 from strsimpy.cosine import Cosine
 import pymongo
-import webhook
 import createLibrary
 
 myClient: object
@@ -909,6 +908,12 @@ def expand(req):
     dialog_id += 1
     print(response)
     return response_dict
+
+
+def exit(req):
+    print("Exit")
+    if user_id != '' and bookName != '':
+        createLibrary.updateUser('Student ' + user_id, bookName, record_list, match_entity, match_verb, state)
 
 
 if __name__ == '__main__':
