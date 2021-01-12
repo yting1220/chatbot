@@ -4,6 +4,7 @@ import copy
 from nltk.stem import WordNetLemmatizer
 from googletrans import Translator
 import createLibrary
+
 # 目前書單 >> "Fairy friends": "精靈", "Sleeping Beauty": "公主"
 story_name = "Sleeping Beauty"
 story_type = "公主"
@@ -124,7 +125,7 @@ def story_analysis():
     # 排序entity 判斷出現次數高者為主要角色
     main_entity = []
     sort_entity = sorted(sort_entity.items(), key=lambda x: x[1], reverse=True)
-    temp = int(len(sort_entity)*0.3)
+    temp = int(len(sort_entity) * 0.3)
     for i in sort_entity[:temp]:
         main_entity.append(i[0])
 
@@ -137,17 +138,19 @@ def story_analysis():
             # 找出speaker
             if story_2_PhraseList[i].replace(' .', '').endswith('said '):
                 if temp[(len(story_2_PhraseList[i].split(' ')) - 5)] == 'and':
-                    speaker = temp[(len(story_2_PhraseList[i].split(' ')) - 6)] + ' and ' + temp[(len(story_2_PhraseList[i].split(' ')) - 4)]
+                    speaker = temp[(len(story_2_PhraseList[i].split(' ')) - 6)] + ' and ' + temp[
+                        (len(story_2_PhraseList[i].split(' ')) - 4)]
                 else:
                     speaker = temp[(len(story_2_PhraseList[i].split(' ')) - 4)]
                 # 改寫原句 將對話句子的說話者代名詞改為角色名稱
                 temp_phrase = storyPhraseList[i].split('" ')[1].split(' said')[0]
-                storyPhraseList[i] = storyPhraseList[i].replace(" "+temp_phrase+" ", speaker)
+                storyPhraseList[i] = storyPhraseList[i].replace(" " + temp_phrase + " ", speaker)
             elif story_2_PhraseList[i].replace(' .', '').endswith('" '):
                 speaker = ''
             else:
                 if temp[(len(story_2_PhraseList[i].split(' ')) - 4)] == 'and':
-                    speaker = temp[(len(story_2_PhraseList[i].split(' ')) - 5)] + ' and ' + temp[(len(story_2_PhraseList[i].split(' ')) - 3)]
+                    speaker = temp[(len(story_2_PhraseList[i].split(' ')) - 5)] + ' and ' + temp[
+                        (len(story_2_PhraseList[i].split(' ')) - 3)]
                 else:
                     speaker = temp[(len(story_2_PhraseList[i].split(' ')) - 3)]
 
@@ -211,7 +214,8 @@ def story_analysis():
             except Exception as e:
                 print(e)
 
-        createLibrary.addBookInfo(story_name, c1_list, v_list, c2_list, story_2_PhraseList[i], sentence_Translate, i, speaker, speak_to, contain_keyword)
+        createLibrary.addBookInfo(story_name, c1_list, v_list, c2_list, story_2_PhraseList[i], sentence_Translate, i,
+                                  speaker, speak_to, contain_keyword)
         contain_keyword = False
         print()
 

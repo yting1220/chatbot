@@ -381,24 +381,28 @@ def evaluate(req, predictor):
                                         break
                                 if checkC1:
                                     break
-                            if not checkC1:
-                                continue
                         # 找V
                         if not checkVerb:
+                            word_morphy = []
                             word_case = []
                             for word in user_v:
                                 for i in wn._morphy(word, pos='v'):
-                                    word_case.append(i)
+                                    word_morphy.append(i)
+                            for index in word_morphy:
                                 #找同義字
                                 while True:
                                     try:
-                                        trans_word_pre = translator.translate(word, src='en', dest="zh-TW").text
-                                        trans_word = translator.translate(trans_word_pre, dest="en").extra_data['parsed'][1][0][0][5][
-                                            0][1]
-                                        word_case.extend(trans_word)
+                                        trans_word_pre = translator.translate(index, src='en', dest="zh-TW").text
+                                        trans_word = translator.translate(trans_word_pre, dest="en").extra_data['parsed'][3][5][0]
+                                        for i in trans_word:
+                                            if i[0] == 'verb':
+                                                for index in i[1]:
+                                                    word_case.append(index[0])
+                                                break
                                         break
                                     except Exception as translator_error:
                                         print(translator_error)
+                            word_case.extend(word_morphy)
                             print(word_case)
                             for index in word_case:
                                 for v_index in story_v:
@@ -414,24 +418,26 @@ def evaluate(req, predictor):
                                         break
                                 if checkVerb:
                                     break
-                            if not checkVerb:
-                                continue
                         # 找C2
                         if not checkC2:
+                            word_case = []
                             for word in user_c2:
-                                word_case = [word, word.lower(), word.capitalize()]
-                                word_case = list(set(word_case))
                                 # 找同義字
                                 while True:
                                     try:
                                         trans_word_pre = translator.translate(word, src='en', dest="zh-TW").text
-                                        trans_word = translator.translate(trans_word_pre, dest="en").extra_data['parsed'][1][0][0][
-                                            5][
-                                            0][1]
-                                        word_case.extend(trans_word)
+                                        trans_word = translator.translate(trans_word_pre, dest="en").extra_data['parsed'][3][5][0]
+                                        for i in trans_word:
+                                            if i[0] == 'noun':
+                                                for index in i[1]:
+                                                    word_case.append(index[0])
+                                                break
                                         break
                                     except Exception as translator_error:
                                         print(translator_error)
+                                word_case.extend([word.lower(), word.capitalize()])
+                            word_case = list(set(word_case))
+                            print(word_case)
                             for index in word_case:
                                 for c2_index in story_c2:
                                     if c2_index == index:
@@ -442,12 +448,11 @@ def evaluate(req, predictor):
                                         break
                                 if checkC2:
                                     break
-                            if not checkC2:
-                                continue
 
                         print(str(checkC1) + ',' + str(checkC2) + ',' + str(checkVerb))
                         all_cursor = myVerbList.find()
                         if checkVerb and checkC2 and checkC1:
+                            no_match = False
                             if similarity_index[0] not in record_list:
                                 record_list.append(similarity_index[0])
                             now_index.append(similarity_index[0])
@@ -908,3 +913,4 @@ def expand(req):
 
 if __name__ == '__main__':
     print(0)
+
