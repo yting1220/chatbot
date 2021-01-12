@@ -59,18 +59,18 @@ def addCommon():
     common_grow_check = ['你的意思是指X嗎', '你是要說X嗎', '你是在說X嗎']
     common_prompt_duplicate = ['你剛剛說過一樣的故事了唷']
     common_expand = ["看來你對這本書已經很熟悉了呢!我們來聊聊你的心得吧", "你很了解這個故事呢!那可以跟我分享你的心得嗎~", "你對這本書很熟悉呢!那我們來說說你對故事的心得吧"]
-    common_expand_student = ['你喜歡這本書嗎？', '你喜歡書裡的哪個部份呢？', '你覺得這本書怎麼樣？']
-    common_expand_chatbot = ['我對這本書的感想是', '讀過這本書的小朋友的感想是']
-    common_expand_chatbot_O = ['那我推薦你這本書，他也是屬於XX類型的書！', '讓我也推薦給你一本XX的書！']
-    common_expand_chatbot_X = ['那我推薦你這本書']
+    common_expand_student = ["你喜歡這本書嗎", "你喜歡這個故事嗎", "你喜歡書裡的內容嗎"]
+    common_expand_chatbot = ["我也喜歡這本書呢! 書裡的劇情很吸引我~", "我也喜歡這個故事呢! 我覺得這本書裡的角色很可愛也很有趣~"]
+    common_expand_chatbot_ask = ["可以跟我分享你喜歡書裡的哪個部分嗎?", "那書裡的哪個部分吸引到你呢?", "那你喜歡書裡的哪個地方呢?"]
+    common_expand_chatbot_data = ["哦哦原來如此~ 我對這本書的感想是XXX", "哦哦原來如此~ 其他小朋友和我分享過他們覺得XXX"]
+    common_suggestion_o = ["你喜歡這類型的書的話, 我可以推薦你XX這本書, 他也是關於OO的故事唷~", "那推薦你XX這本書, 書中也是描述關於OO的故事唷~說不定你也會喜歡呢!"]
+    common_suggestion_x = ["那我可以推薦你看看XX這本書, 他是另一個不同類型的故事, 說不定你會喜歡唷", "那你可以讀讀看XX這本書, 他是另一個不同類型的故事, 說不定你會喜歡呢", "那你可以去讀讀看另一種類型的故事，像是XX這本書, 說不定你會喜歡唷"]
     common = [common_combine, common_bookRecord, commom_book_finish, common_start, common_start_checkO, common_start_checkX, common_book_second, common_prompt, common_prompt_secondLogin, common_evaluate, common_follow,
-              common_conj, common_repeat, common_prompt_checkO, common_prompt_checkX, common_prompt_return,
-              common_inqurie_new, common_grow_check, common_prompt_duplicate, common_expand, common_expand_student, common_expand_chatbot, common_expand_chatbot_O,
-              common_expand_chatbot_X]
+              common_conj, common_repeat, common_prompt_checkO, common_prompt_checkX, common_prompt_return, common_inqurie_new, common_grow_check, common_prompt_duplicate, common_expand, common_expand_student,
+              common_expand_chatbot, common_expand_chatbot_ask, common_expand_chatbot_data, common_suggestion_o, common_suggestion_x]
     common_type = ["common_combine", "common_bookRecord", "commom_book_finish", "common_start", "common_start_checkO", "common_start_checkX", "common_book_second", "common_prompt", "common_prompt_secondLogin", "common_evaluate",
-                   "common_follow", "common_conj", "common_repeat", "common_prompt_checkO", "common_prompt_checkX",
-                   "common_prompt_return", "common_inqurie_new", "common_grow_check", "common_prompt_duplicate",
-                   "common_expand", "common_expand_student", "common_expand_chatbot", "common_expand_chatbot_O", "common_expand_chatbot_X"]
+                   "common_follow", "common_conj", "common_repeat", "common_prompt_checkO", "common_prompt_checkX", "common_prompt_return", "common_inqurie_new", "common_grow_check", "common_prompt_duplicate",
+                   "common_expand", "common_expand_student", "common_expand_chatbot", "common_expand_chatbot_ask", "common_expand_chatbot_data", "common_suggestion_o", "common_suggestion_x"]
 
     for i in range(len(common)):
         common_dict = {'type': common_type[i], 'content': common[i]}
