@@ -47,6 +47,7 @@ def coReference():
         # 額外處理
         if story_name == "Fairy friends" and temp_name == 'Patch , a bad elf':
             temp_name = 'Patch'
+        temp_name = temp_name.replace("a ", "").replace("the ", "").replace("The ", "").replace("A ", "")
         entity_list.append(temp_name)
         # print(temp_name)
 
@@ -88,12 +89,10 @@ def story_analysis():
     story_2 = ' '.join(content_list)
     story_2 = story_2.replace(' . ', ' . \r\n')
     if story_name == "Fairy friends":
-        story_2 = story_2.replace('a mouse ! a mouse', 'a mouse.\r\na mouse').replace('elf ! Patch',
-                                                                                      'elf.\r\nPatch').replace(
-            'Patch . \r\nGo away', 'Patch . Go away').replace('elf ! " Lily', 'elf ! " \r\nLily').replace('too ! " a',
-                                                                                                          'too !\r\n" a')
+        story_2 = story_2.replace('mouse ! mouse', 'mouse.\r\nmouse').replace('elf ! Patch', 'elf.\r\nPatch').replace(
+            'Patch . \r\nGo away', 'Patch . Go away').replace('elf ! " Lily', 'elf ! " \r\nLily').replace('too ! " fairy', 'too !\r\n" fairy')
     if story_name == "Sleeping Beauty":
-        story_2 = story_2.replace('die . \r\na', 'die . a').replace('years . \r\n"', 'years . " \r\n')
+        story_2 = story_2.replace('die . \r\nbaby', 'die . baby').replace('years . \r\n"', 'years . " \r\n')
     story_2_PhraseList = story_2.split('\r\n')
     print(story_2_PhraseList)
 
@@ -109,7 +108,7 @@ def story_analysis():
         if '"' in story_2_PhraseList[i]:
             counter_speech_ind = i
             temp = story_2_PhraseList[i].split(' ')
-            # 找出speaker
+            # 找出speaker 待修正
             if story_2_PhraseList[i].replace(' .', '').endswith('said '):
                 if temp[(len(story_2_PhraseList[i].split(' ')) - 5)] == 'and':
                     speaker = temp[(len(story_2_PhraseList[i].split(' ')) - 6)] + ' and ' + temp[
@@ -136,7 +135,6 @@ def story_analysis():
                     speak_to = counter_speech_ind - 1
 
             counter_speech = True
-            # story_2_PhraseList[i] = story_2_PhraseList[i].split('"')[1].split('"')[0]
         else:
             counter_speech = False
 
