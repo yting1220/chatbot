@@ -170,13 +170,21 @@ def check_book(req):
                         for i in range(len(record_list)):
                             if i < 3:
                                 if i > 0:
-                                    result += choice(find_result['content']) + myVerbList.find_one({"Sentence_id": int(record_list[-(i+1)])})["sentence_Translate"]
+                                    if len(record_list) == 2:
+                                        result += choice(find_result['content']) + myVerbList.find_one({"Sentence_id": int(record_list[i-2])})["sentence_Translate"]
+                                    else:
+                                        result += choice(find_result['content']) + myVerbList.find_one({"Sentence_id": int(record_list[i-3])})["sentence_Translate"]
                                 else:
-                                    result += myVerbList.find_one({"Sentence_id": int(record_list[-(i+1)])})["sentence_Translate"]
+                                    if len(record_list) == 2:
+                                        result += myVerbList.find_one({"Sentence_id": int(record_list[i-2])})["sentence_Translate"]
+                                    elif len(record_list) > 2:
+                                        result += myVerbList.find_one({"Sentence_id": int(record_list[i-3])})["sentence_Translate"]
+                                    else:
+                                        result += myVerbList.find_one({"Sentence_id": int(record_list[i-1])})["sentence_Translate"]
+
                     else:
                         result = myVerbList.find_one({"Sentence_id": int(record_list[0])})["sentence_Translate"]
 
-                    # 新增故事句子 從record裡面挑1句
                     for word in ['。', '，', '！']:
                         result = result.replace(word, '')
                     find_common = {'type': 'common_book_second'}
@@ -393,12 +401,13 @@ def evaluate(req, predictor):
                                 while True:
                                     try:
                                         trans_word_pre = translator.translate(index, src='en', dest="zh-TW").text
-                                        trans_word = translator.translate(trans_word_pre, dest="en").extra_data['parsed'][3][5][0]
-                                        for i in trans_word:
-                                            if i[0] == 'verb':
-                                                for index in i[1]:
-                                                    word_case.append(index[0])
-                                                break
+                                        trans_word = translator.translate(trans_word_pre, dest="en").extra_data['parsed']
+                                        if len(trans_word) > 3:
+                                            for i in trans_word[3][5][0]:
+                                                if i[0] == 'verb':
+                                                    for index in i[1]:
+                                                        word_case.append(index[0])
+                                                    break
                                         break
                                     except Exception as translator_error:
                                         print(translator_error)
@@ -426,12 +435,13 @@ def evaluate(req, predictor):
                                 while True:
                                     try:
                                         trans_word_pre = translator.translate(word, src='en', dest="zh-TW").text
-                                        trans_word = translator.translate(trans_word_pre, dest="en").extra_data['parsed'][3][5][0]
-                                        for i in trans_word:
-                                            if i[0] == 'noun':
-                                                for index in i[1]:
-                                                    word_case.append(index[0])
-                                                break
+                                        trans_word = translator.translate(trans_word_pre, dest="en").extra_data['parsed']
+                                        if len(trans_word) > 3:
+                                            for i in trans_word[3][5][0]:
+                                                if i[0] == 'noun':
+                                                    for index in i[1]:
+                                                        word_case.append(index[0])
+                                                    break
                                         break
                                     except Exception as translator_error:
                                         print(translator_error)
@@ -649,29 +659,15 @@ def repeat(req):
 def retrive(req):
     print("RETRIVE")
     global now_index, dialog_id, state
+    go_expand = False
     time = req['user']['lastSeenTime']
     session_id = req['session']['id']
     connect()
     all_cursor = myVerbList.find()
     print(record_list)
-    if record_list[-1] == (all_cursor.count() - 1):
+    if record_list[-1] == (all_cursor.count() - 1) or record_list[-1] == (all_cursor.count() - 2):
         # 講到最後一句
-        state = True
-        find_common = {'type': 'common_expand'}
-        find_common_result = myCommonList.find_one(find_common)
-        response = "\n"+choice(find_common_result['content'])
-        createLibrary.updateUser('Student ' + user_id, bookName, record_list, match_entity, match_verb, state)
-        response_dict = {"prompt": {
-            "firstSimple": {
-                "speech": response,
-                "text": response
-            }},
-            "scene": {
-                "next": {
-                    'name': 'Expand'
-                }
-            }
-        }
+        go_expand = True
     else:
         if len(now_index) == 0:
             # 沒有新故事
@@ -699,8 +695,7 @@ def retrive(req):
             # 排序now_index
             now_index = sorted(now_index, reverse=True)
             if now_index[0] > all_cursor.count():
-                response = "看來你對這本書已經很熟悉了呢!"
-                state = True
+                go_expand = True
             else:
                 find_condition = {'Sentence_id': now_index[0] + 1}
                 find_result_next = myVerbList.find_one(find_condition)
@@ -714,6 +709,24 @@ def retrive(req):
                 if (now_index[0] + 1) not in record_list:
                     record_list.append(now_index[0] + 1)
 
+    if go_expand:
+        state = True
+        find_common = {'type': 'common_expand'}
+        find_common_result = myCommonList.find_one(find_common)
+        response = "\n"+choice(find_common_result['content'])
+        createLibrary.updateUser('Student ' + user_id, bookName, record_list, match_entity, match_verb, state)
+        response_dict = {"prompt": {
+            "firstSimple": {
+                "speech": response,
+                "text": response
+            }},
+            "scene": {
+                "next": {
+                    'name': 'Expand'
+                }
+            }
+        }
+    else:
         find_common = {'type': 'common_repeat'}
         find_common_result = myCommonList.find_one(find_common)
         response += " " + choice(find_common_result['content'])
@@ -898,17 +911,23 @@ def expand(req):
     session_id = req['session']['id']
     if not expand_user:
         find_common = {'type': 'common_expand_student'}
+        find_result = myCommonList.find_one(find_common)
+        response = choice(find_result['content'])
         expand_user = True
     else:
-        if '我喜歡這本書' in userSay or userSay == '喜歡' or '嗯' in userSay or '對' in userSay:
+        if '我喜歡這本書' in userSay or userSay == '喜歡' or '嗯' in userSay or '對' in userSay or userSay == '我喜歡':
             # 接續詢問使用者喜歡故事的原因
             find_common = {'type': 'common_expand_chatbot'}
+            find_common2 = {'type': 'common_expand_chatbot_ask'}
+            find_result = myCommonList.find_one(find_common)
+            find_result2 = myCommonList.find_one(find_common2)
+            response = choice(find_result['content'])+' '+choice(find_result2['content'])
         else:
             find_common = {'type': 'common_expand_chatbot_data'}
+            find_result = myCommonList.find_one(find_common)
+            response = choice(find_result['content'])
         expand_user = False
 
-    find_common_result = myCommonList.find_one(find_common)
-    response = choice(find_common_result['content'])
     response_dict = {"prompt": {
         "firstSimple": {
             "speech": response,
