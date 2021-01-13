@@ -30,6 +30,7 @@ dialog_id: int
 qa_id: int
 second_login: False
 state: False
+expand_user = False
 
 
 # 判斷是否為中文
@@ -891,12 +892,43 @@ def addElaboration(req):
 # 學生心得回饋
 def expand(req):
     print("Expand")
+    global dialog_id, expand_user
+    userSay = req['intent']['query']
+    time = req['user']['lastSeenTime']
+    session_id = req['session']['id']
+    if not expand_user:
+        find_common = {'type': 'common_expand_student'}
+        expand_user = True
+    else:
+        if '我喜歡這本書' in userSay or userSay == '喜歡' or '嗯' in userSay or '對' in userSay:
+            # 接續詢問使用者喜歡故事的原因
+            find_common = {'type': 'common_expand_chatbot'}
+        else:
+            find_common = {'type': 'common_expand_chatbot_data'}
+        expand_user = False
+
+    find_common_result = myCommonList.find_one(find_common)
+    response = choice(find_common_result['content'])
+    response_dict = {"prompt": {
+        "firstSimple": {
+            "speech": response,
+            "text": response
+        }}
+    }
+    # 記錄對話過程
+    createLibrary.addDialog(bookName, session_id, dialog_id, 'chatbot', response, time)
+    dialog_id += 1
+    print(response)
+    return response_dict
+
+
+# 依據學生喜好建議其他書籍
+def suggestion(req):
+    print("Suggestion")
     global dialog_id
     time = req['user']['lastSeenTime']
     session_id = req['session']['id']
-    find_common = {'type': 'common_expand_student'}
-    find_common_result = myCommonList.find_one(find_common)
-    response = choice(find_common_result['content'])
+    response = ''
     response_dict = {"prompt": {
         "firstSimple": {
             "speech": response,

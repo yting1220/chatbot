@@ -10,6 +10,9 @@ story_name = "Sleeping Beauty"
 story_type = "公主"
 content_list = []
 words = []
+entityInfo = {}
+entity_list = []
+main_entity = []
 
 
 def createStory():
@@ -25,7 +28,8 @@ def coReference():
     # 紀錄每個角色出現次數
     # tempMax = 0
     # tempProtagonist = ''
-    global content_list
+    global content_list, entityInfo, entity_list, main_entity
+    sort_entity = {}
     createStory()
     content = words.replace('\n', ' ')
     predictor = Predictor.from_path(
@@ -36,7 +40,6 @@ def coReference():
     result = copy.deepcopy(result_1)
 
     content_list = result['document']
-
     # 找出代名詞對應主詞 修改原文
     for i in range(len(result['clusters'])):
         count = 0
@@ -44,6 +47,7 @@ def coReference():
         # 額外處理
         if story_name == "Fairy friends" and temp_name == 'Patch , a bad elf':
             temp_name = 'Patch'
+        entity_list.append(temp_name)
         # print(temp_name)
 
         for j in result['clusters'][i]:
@@ -54,17 +58,29 @@ def coReference():
             # print(content_list[j[0]])
             if j[0] == j[1]:
                 content_list[j[0]] = temp_name
-        # 計算出現次數
-    #     if count > tempMax:
-    #         tempMax = count
-    #         tempProtagonist = temp_name
-    #
-    #     print("出現次數：" + str(count), end='\r\n\r\n')
+        # 計算出現次數最高者
+        # if count > tempMax:
+        #     tempMax = count
+            # tempProtagonist = temp_name
+
+        entityInfo[temp_name] = {"Frequence": count}
+        sort_entity[temp_name] = count
+        # print("出現次數：" + str(count), end='\r\n\r\n')
     # print('主角出現'+str(tempMax) + "次：" + tempProtagonist + '\n')
+
+    # 排序entity 判斷出現次數高者為主要角色
+    main_entity = []
+    sort_entity = sorted(sort_entity.items(), key=lambda x: x[1], reverse=True)
+    temp = int(len(sort_entity) * 0.3)
+    for i in sort_entity[:temp]:
+        main_entity.append(i[0])
 
 
 def story_analysis():
     coReference()
+    wnl = WordNetLemmatizer()
+    verbName = []
+    verbInfo = {}
     contain_keyword = False
 
     storyPhraseList = words.split('\n')
@@ -86,48 +102,6 @@ def story_analysis():
         "https://storage.googleapis.com/allennlp-public-models/biaffine-dependency-parser-ptb-2020.04.06.tar.gz")
 
     counter_speech = False
-    entityName = []
-    verbName = []
-
-    wnl = WordNetLemmatizer()
-    # 找出所有keyword
-    for i in range(len(story_2_PhraseList)):
-        v = False
-        if story_2_PhraseList[i].endswith(', '):
-            sentence = story_2_PhraseList[i].replace(',', '')
-        else:
-            sentence = story_2_PhraseList[i].replace(' .', '')
-        result = predictor.predict(
-            sentence=sentence
-        )
-        for j in range(len(result['pos'])):
-            if v == False and (result['pos'][j] == 'PROPN' or result['pos'][j] == 'NOUN'):
-                entityName.append(result['words'][j])
-                continue
-            if result['pos'][j] == 'VERB' and result['predicted_dependencies'][j] != 'aux':
-                v = True
-                word = wnl.lemmatize(result['words'][j], 'v')
-                verbName.append(word.lower())
-                continue
-            if v == True and (result['pos'][j] == 'PROPN' or result['pos'][j] == 'NOUN'):
-                entityName.append(result['words'][j])
-                continue
-    entityInfo = {}
-    sort_entity = {}
-    for i in entityName:
-        entityInfo[i] = {"Frequence": entityName.count(i)}
-        sort_entity[i] = entityName.count(i)
-    verbInfo = {}
-    for i in verbName:
-        verbInfo[i] = {"Frequence": verbName.count(i)}
-    createLibrary.addBookKeyword(story_name, entityInfo, verbInfo)
-
-    # 排序entity 判斷出現次數高者為主要角色
-    main_entity = []
-    sort_entity = sorted(sort_entity.items(), key=lambda x: x[1], reverse=True)
-    temp = int(len(sort_entity) * 0.3)
-    for i in sort_entity[:temp]:
-        main_entity.append(i[0])
 
     for i in range(len(story_2_PhraseList)):
         speaker = ''
@@ -183,19 +157,24 @@ def story_analysis():
             if v == False and (result['pos'][j] == 'PROPN' or result['pos'][j] == 'NOUN'):
                 if result['words'][j] not in c1_list:
                     c1_list.append(result['words'][j])
-                    if result['words'][j] in main_entity:
-                        contain_keyword = True
+                    for index in main_entity:
+                        if result['words'][j] in index:
+                            contain_keyword = True
                 continue
             if result['pos'][j] == 'VERB' and result['predicted_dependencies'][j] != 'aux':
                 v = True
                 if result['words'][j] not in v_list:
                     v_list.append(result['words'][j].lower())
+                    # 找出動詞keyword
+                    word = wnl.lemmatize(result['words'][j], 'v')
+                    verbName.append(word.lower())
                 continue
             if v == True and (result['pos'][j] == 'PROPN' or result['pos'][j] == 'NOUN'):
                 if result['words'][j] not in c2_list:
                     c2_list.append(result['words'][j])
-                    if result['words'][j] in main_entity:
-                        contain_keyword = True
+                    for index in main_entity:
+                        if result['words'][j] in index:
+                            contain_keyword = True
                 continue
         print('S:' + str(c1_list) + ' V:' + str(v_list) + ' O:' + str(c2_list))
         translator = Translator()
@@ -217,9 +196,11 @@ def story_analysis():
         createLibrary.addBookInfo(story_name, c1_list, v_list, c2_list, story_2_PhraseList[i], sentence_Translate, i,
                                   speaker, speak_to, contain_keyword)
         contain_keyword = False
-        print()
+
+    for index in verbName:
+        verbInfo[index] = {"Frequence": verbName.count(index)}
+    createLibrary.addBookKeyword(story_name, entityInfo, verbInfo)
 
 
 if __name__ == "__main__":
-    # coReference()
     story_analysis()
