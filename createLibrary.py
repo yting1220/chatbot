@@ -47,7 +47,7 @@ def addCommon():
     common_prompt = ['可以跟我說說故事裡發生了什麼事嗎？', '可以告訴我故事裡的角色發生了甚麼事嗎？']
     common_prompt_secondLogin = ['那之後還發生了甚麼事呢？', '接下來故事中還提到了甚麼呢？', '你可以再告訴我之後的故事嗎？', '你能再跟我分享接下來的故事嗎?']
     common_evaluate = ['哦~原來如此', '你講得很好呢！', '你說的對~', '你說的很好唷~']
-    common_follow = ['所以故事裡', '故事裡提到', '所以故事中發生了', '我也有看到故事中說到']
+    common_follow = ['我還知道', '我也看到', '故事中還有提到', '我還有看到']
     common_conj = [' 然後 ', ' 接下來 ', ' 而且 ', ' 接著 ', ' 後來 ']
     common_repeat = ['那接下來又發生了甚麼事呢？']
     # 比對不到 進入Inqurie
@@ -120,7 +120,7 @@ def updateUser(userId, bookName, record_list, match_entity, match_verb, state):
         find_user = {'User_id': userId}
         now_user = myUserList.find_one(find_user)
         # 若沒有該使用者之資料
-        if not list(now_user):
+        if now_user is None:
             # 直接新增一筆
             mydict = {'User_id': userId, 'BookTalkSummary': {bookName: bookTalkSummary}}
             myUserList.insert(mydict)
