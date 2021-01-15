@@ -160,12 +160,13 @@ def story_analysis():
                             contain_keyword = True
                 continue
             if result['pos'][j] == 'VERB' and result['predicted_dependencies'][j] != 'aux':
-                v = True
-                if result['words'][j] not in v_list:
-                    v_list.append(result['words'][j].lower())
-                    # 找出動詞keyword
-                    word = wnl.lemmatize(result['words'][j], 'v')
-                    verbName.append(word.lower())
+                if result['words'][j].lower() != 'will' and result['words'][j].lower() != 'can':
+                    v = True
+                    if result['words'][j] not in v_list:
+                        v_list.append(result['words'][j].lower())
+                        # 找出動詞keyword
+                        word = wnl.lemmatize(result['words'][j], 'v')
+                        verbName.append(word.lower())
                 continue
             if v == True and (result['pos'][j] == 'PROPN' or result['pos'][j] == 'NOUN'):
                 if result['words'][j] not in c2_list:
@@ -191,8 +192,7 @@ def story_analysis():
             except Exception as e:
                 print(e)
 
-        createLibrary.addBookInfo(story_name, c1_list, v_list, c2_list, story_2_PhraseList[i], sentence_Translate, i,
-                                  speaker, speak_to, contain_keyword)
+        createLibrary.addBookInfo(story_name, c1_list, v_list, c2_list, story_2_PhraseList[i], sentence_Translate, i, speaker, speak_to, contain_keyword)
         contain_keyword = False
 
     for index in verbName:

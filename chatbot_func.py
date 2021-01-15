@@ -150,7 +150,7 @@ def check_book(req):
         if list(myUserList.find()):
             user_data_load = myUserList.find_one({"User_id": 'Student ' + user_id})
             # 確認有該本書
-            if bookName in user_data_load["BookTalkSummary"].keys():
+            if user_data_load is not None and bookName in user_data_load["BookTalkSummary"].keys():
                 # 書本狀態紀錄為已完成
                 if user_data_load["BookTalkSummary"][bookName]["Finish"]:
                     find_condition = {'type': 'commom_book_finish'}
@@ -162,34 +162,28 @@ def check_book(req):
                     record_list = user_data_load["BookTalkSummary"][bookName]["Sentence_id_list"]
                     match_entity = user_data_load["BookTalkSummary"][bookName]["Entity_list"]
                     match_verb = user_data_load["BookTalkSummary"][bookName]["Verb_list"]
-                    result = ''
-                    second_login = True
-                    if len(record_list) > 1:
-                        find_condition = {'type': 'common_combine'}
-                        find_result = myCommonList.find_one(find_condition)
-                        for i in range(len(record_list)):
-                            if i < 3:
-                                if i > 0:
-                                    if len(record_list) == 2:
+                    if list(record_list):
+                        second_login = True
+                        if len(record_list) > 1:
+                            find_condition = {'type': 'common_combine'}
+                            find_result = myCommonList.find_one(find_condition)
+                            if len(record_list) == 1:
+                                result = myVerbList.find_one({"Sentence_id": int(record_list[0])})["sentence_Translate"]
+                            elif len(record_list) == 2:
+                                result = myVerbList.find_one({"Sentence_id": int(record_list[0])})["sentence_Translate"] + choice(find_result['content']) + myVerbList.find_one({"Sentence_id": int(record_list[1])})["sentence_Translate"]
+                            else:
+                                result = myVerbList.find_one({"Sentence_id": int(record_list[-3])})["sentence_Translate"]
+                                for i in range(len(record_list)):
+                                    if i < 3:
                                         result += choice(find_result['content']) + myVerbList.find_one({"Sentence_id": int(record_list[i-2])})["sentence_Translate"]
-                                    else:
-                                        result += choice(find_result['content']) + myVerbList.find_one({"Sentence_id": int(record_list[i-3])})["sentence_Translate"]
-                                else:
-                                    if len(record_list) == 2:
-                                        result += myVerbList.find_one({"Sentence_id": int(record_list[i-2])})["sentence_Translate"]
-                                    elif len(record_list) > 2:
-                                        result += myVerbList.find_one({"Sentence_id": int(record_list[i-3])})["sentence_Translate"]
-                                    else:
-                                        result += myVerbList.find_one({"Sentence_id": int(record_list[i-1])})["sentence_Translate"]
+                        else:
+                            result = myVerbList.find_one({"Sentence_id": int(record_list[0])})["sentence_Translate"]
 
-                    else:
-                        result = myVerbList.find_one({"Sentence_id": int(record_list[0])})["sentence_Translate"]
-
-                    for word in ['。', '，', '！']:
-                        result = result.replace(word, '')
-                    find_common = {'type': 'common_book_second'}
-                    find_common_result = myCommonList.find_one(find_common)
-                    response = choice(find_common_result['content']) + result
+                        for word in ['。', '，', '！']:
+                            result = result.replace(word, '')
+                        find_common = {'type': 'common_book_second'}
+                        find_common_result = myCommonList.find_one(find_common)
+                        response = choice(find_common_result['content']) + result
 
         # 記錄對話過程
         createLibrary.addDialog(bookName, session_id, dialog_id, 'chatbot', response, time)
@@ -269,7 +263,6 @@ def evaluate(req, predictor):
     global now_user_say, repeat_content, record_list, match_verb, match_entity, firstTime, now_index, dialog_id, qa_id, double_check, state
     firstTime = False
     no_match = False
-    similarity_search = False
     now_index = []
     repeat_content = []
     response = ''
@@ -358,7 +351,7 @@ def evaluate(req, predictor):
 
             # 若使用者輸入中結構不完整 > 依照相似度判斷
             if len(user_c1) == 0 or len(user_v) == 0 or len(user_c2) == 0:
-                similarity_search = True
+                no_match = True
             # 都不為空才進行二次確認
             elif len(user_c1) != 0 and len(user_v) != 0 and len(user_c2) != 0:
                 for similarity_index in similarity_sentence:
@@ -501,48 +494,12 @@ def evaluate(req, predictor):
                             no_match = True
                             similarity_sentence.remove(similarity_index)
                     else:
-                        similarity_search = True
+                        no_match = True
         else:
             # 沒有相似的句子
             no_match = True
 
-        if similarity_search:
-            # 相似度符合 但故事結構不完整 採用最高相似度的句子 接續repeat
-            if similarity_sentence[0][0] not in record_list:
-                record_list.append(similarity_sentence[0][0])
-            now_index.append(similarity_sentence[0][0])
-
-            all_cursor = myVerbList.find()
-            find_common = {'type': 'common_evaluate'}
-            find_common_result = myCommonList.find_one(find_common)
-            response = choice(find_common_result['content'])
-            exist_elaboration = myVerbList.find_one(
-                {"Sentence_id": similarity_sentence[0][0], "Student_elaboration": {'$exists': True}})
-            if exist_elaboration is not None:
-                # 若有學生曾輸入過的詮釋 > 回答該句
-                repeat_content.append(all_cursor[similarity_sentence[0][0]]['Student_elaboration'])
-            else:
-                result = all_cursor[similarity_sentence[0][0]]['sentence_Translate']
-                for word in ['。', '，', '！']:
-                    result = result.replace(word, ' ')
-                repeat_content.append(result)
-
-            # 記錄對話過程
-            createLibrary.addDialog(bookName, session_id, dialog_id, 'chatbot', response, time)
-
-            response_dict = {"prompt": {
-                "firstSimple": {
-                    "speech": response,
-                    "text": response
-                }},
-                "scene": {
-                    "next": {
-                        'name': 'REPEAT'
-                    }
-                }
-            }
-
-        elif no_match:
+        if no_match:
             if double_check:
                 response_dict = {"scene": {
                     "next": {
@@ -699,9 +656,11 @@ def retrive(req):
             else:
                 find_condition = {'Sentence_id': now_index[0] + 1}
                 find_result_next = myVerbList.find_one(find_condition)
-                find_common = {'type': 'common_conj'}
-                find_common_result = myCommonList.find_one(find_common)
-                story_conj = choice(find_common_result['content'])
+                find_common_follow = {'type': 'common_follow'}
+                result_follow = myCommonList.find_one(find_common_follow)
+                find_common_conj = {'type': 'common_conj'}
+                result_conj = myCommonList.find_one(find_common_conj)
+                story_conj = choice(result_conj['content'])+choice(result_follow['content'])
                 result = find_result_next["sentence_Translate"]
                 for word in ['。', '，', '！']:
                     result = result.replace(word, ' ')
@@ -903,7 +862,7 @@ def addElaboration(req):
 
 
 # 學生心得回饋
-def expand(req):
+def expand(req, senta):
     print("Expand")
     global dialog_id, expand_user
     userSay = req['intent']['query']
@@ -915,7 +874,10 @@ def expand(req):
         response = choice(find_result['content'])
         expand_user = True
     else:
-        if '我喜歡這本書' in userSay or userSay == '喜歡' or '嗯' in userSay or '對' in userSay or userSay == '我喜歡':
+        # Senta情感分析
+        input_dict = {"text": [userSay]}
+        results = senta.sentiment_classify(data=input_dict)
+        if results[0]['sentiment_key'] == "positive":
             # 接續詢問使用者喜歡故事的原因
             find_common = {'type': 'common_expand_chatbot'}
             find_common2 = {'type': 'common_expand_chatbot_ask'}
