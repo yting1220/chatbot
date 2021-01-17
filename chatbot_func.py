@@ -31,6 +31,9 @@ qa_id: int
 second_login: False
 state: False
 expand_user = False
+book_match = False
+second_check = False
+second_match = False
 
 
 # 判斷是否為中文
@@ -72,28 +75,31 @@ def user_login(req):
 # 詢問書名
 def start_chat(req):
     print("START")
-    global user_id
+    global user_id, second_check
     user_id = req['intent']['query']
     connect()
     book_record = ''
-    find_condition = {'type': 'common_start'}
-    find_result = myCommonList.find_one(find_condition)
-    response = choice(find_result['content'])
-    # 取得該使用者紀錄
-    if list(myUserList.find()):
-        user_exist = myUserList.find_one({"User_id": 'Student ' + user_id})
-        if user_exist is not None:
-            find_condition = {'type': 'common_combine'}
-            find_result = myCommonList.find_one(find_condition)
-            allBook = list(user_exist["BookTalkSummary"].keys())
-            for i in range(len(allBook)):
-                if i > 0:
-                    book_record += choice(find_result['content']) + allBook[i].replace("_", " ")
-                else:
-                    book_record += allBook[i].replace("_", " ")
-            find_condition = {'type': 'common_bookRecord'}
-            find_result = myCommonList.find_one(find_condition)
-            response = choice(find_result['content']).replace('X', book_record)
+    if second_check:
+        response = ''
+    else:
+        find_condition = {'type': 'common_start'}
+        find_result = myCommonList.find_one(find_condition)
+        response = choice(find_result['content'])
+        # 取得該使用者紀錄
+        if list(myUserList.find()):
+            user_exist = myUserList.find_one({"User_id": 'Student ' + user_id})
+            if user_exist is not None:
+                find_condition = {'type': 'common_combine'}
+                find_result = myCommonList.find_one(find_condition)
+                allBook = list(user_exist["BookTalkSummary"].keys())
+                for i in range(len(allBook)):
+                    if i > 0:
+                        book_record += choice(find_result['content']) + allBook[i].replace("_", " ")
+                    else:
+                        book_record += allBook[i].replace("_", " ")
+                find_condition = {'type': 'common_bookRecord'}
+                find_result = myCommonList.find_one(find_condition)
+                response = choice(find_result['content']).replace('X', book_record)
 
     response_dict = {"prompt": {
         "firstSimple": {
@@ -105,25 +111,102 @@ def start_chat(req):
     return response_dict
 
 
-# 比對書名
 def check_book(req):
     print('CHECK')
-    global bookName, myVerbList, allDialog, firstTime, dialog_id, qa_id, myQATable, myElaboration, double_check, second_login, record_list, match_entity, match_verb, state
+    global book_match, bookName, second_match, second_check
+    second_check = True
+    userSay = req['intent']['query']
+    connect()
+    if second_match:
+        response_dict = {"scene": {
+            "next": {
+                'name': 'Match_book'
+            }
+        }}
+    else:
+        if is_all_chinese(userSay):
+            # 若輸入全中文
+            find_condition = {'bookNameTranslate': {"$regex": userSay}}
+        else:
+            find_condition = {'bookName': {"$regex": userSay, "$options": 'i'}}
+        find_result_cursor = myBookList.find(find_condition)
+        print(find_result_cursor.count())
+        if find_result_cursor.count() != 0:
+            if find_result_cursor.count() == 1:
+                book_match = True
+                bookName = find_result_cursor[0]['bookName'].replace(' ', '_')
+                response_dict = {"scene": {
+                    "next": {
+                        'name': 'Match_book'
+                    }
+                }}
+            else:
+                allBook = ''
+                for index in range(find_result_cursor.count()):
+                    if index == 0:
+                        allBook += find_result_cursor[index]['bookName']
+                    else:
+                        allBook += "、" + find_result_cursor[index]['bookName']
+                print(allBook)
+                response = '我有看過'+allBook+" 你是在指哪一本故事呢?"
+                response_dict = {"prompt": {
+                    "firstSimple": {
+                        "speech": response,
+                        "text": response
+                    }
+                }}
+                second_match = True
+        else:
+            book_match = False
+            response_dict = {"scene": {
+                "next": {
+                    'name': 'Match_book'
+                }
+            }}
+
+    return response_dict
+
+
+# 確認書本是否有紀錄
+def match_book(req):
+    print('Match_record')
+    global bookName, myVerbList, allDialog, firstTime, dialog_id, qa_id, myQATable, myElaboration, double_check, second_login, record_list, match_entity, match_verb, state, book_match, second_match, second_check
+    record_search = False
     userSay = req['intent']['query']
     time = req['user']['lastSeenTime']
     session_id = req['session']['id']
-    check_noMatch = False
+    check_Match = False
     connect()
+    response = ''
 
-    if is_all_chinese(userSay):
-        # 若輸入全中文
-        find_condition = {'bookNameTranslate': userSay}
+    if second_match:
+        if is_all_chinese(userSay):
+            find_condition = {'bookNameTranslate': userSay}
+        else:
+            find_condition = {'bookName': userSay}
+        find_result_cursor = myBookList.find_one(find_condition)
+        if find_result_cursor is not None:
+            record_search = True
+            bookName = find_result_cursor['bookName'].replace(' ', '_')
+            print(find_result_cursor)
+        else:
+            find_common = {'type': 'common_start_checkX'}
+            find_common_result = myCommonList.find_one(find_common)
+            response = choice(find_common_result['content'])
     else:
-        find_condition = {'bookName': userSay}
-    find_result_cursor = myBookList.find_one(find_condition)
+        if book_match:
+            # 比對成功
+            record_search = True
+            print(bookName)
+        else:
+            # 比對失敗
+            find_common = {'type': 'common_start_checkX'}
+            find_common_result = myCommonList.find_one(find_common)
+            response = choice(find_common_result['content'])
 
-    if find_result_cursor is not None:
+    if record_search:
         # 比對成功
+        check_Match = True
         firstTime = True
         double_check = False
         dialog_id = 0
@@ -131,7 +214,6 @@ def check_book(req):
         state = False
         second_login = False
 
-        bookName = find_result_cursor['bookName'].replace(' ', '_')
         nowBook = myClient[bookName]
         myVerbList = nowBook['VerbTable']
         allDialog = nowBook['S_R_Dialog']
@@ -156,7 +238,7 @@ def check_book(req):
                     find_condition = {'type': 'commom_book_finish'}
                     find_result = myCommonList.find_one(find_condition)
                     response = choice(find_result['content'])
-                    check_noMatch = True
+                    check_Match = False
                 else:
                     # 抓出過去的故事資料
                     record_list = user_data_load["BookTalkSummary"][bookName]["Sentence_id_list"]
@@ -188,21 +270,9 @@ def check_book(req):
         # 記錄對話過程
         createLibrary.addDialog(bookName, session_id, dialog_id, 'chatbot', response, time)
         dialog_id += 1
-    else:
-        # 比對失敗
-        find_common = {'type': 'common_start_checkX'}
-        find_common_result = myCommonList.find_one(find_common)
-        response = choice(find_common_result['content'])
-        check_noMatch = True
 
-    if check_noMatch:
-        response_dict = {"prompt": {
-            "firstSimple": {
-                "speech": response,
-                "text": response
-            }
-        }}
-    else:
+    if check_Match:
+        second_check = False
         response_dict = {"prompt": {
             "firstSimple": {
                 "speech": response,
@@ -214,6 +284,20 @@ def check_book(req):
                 }
             }
         }
+    else:
+        response_dict = {"prompt": {
+            "firstSimple": {
+                "speech": response,
+                "text": response
+            }
+        },
+            "scene": {
+                "next": {
+                    'name': 'Check_book'
+                }
+            }
+        }
+        second_match = False
 
     print(response)
     return response_dict
