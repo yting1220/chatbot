@@ -6,8 +6,8 @@ from googletrans import Translator
 import createLibrary
 
 # 目前書單 >> "Fairy friends": "精靈", "Sleeping Beauty": "公主"
-story_name = "Sleeping Beauty"
-story_type = "公主"
+story_name = "Fairy friends"
+story_type = "精靈"
 content_list = []
 words = []
 entityInfo = {}
@@ -93,6 +93,8 @@ def story_analysis():
             'Patch . \r\nGo away', 'Patch . Go away').replace('elf ! " Lily', 'elf ! " \r\nLily').replace('too ! " fairy', 'too !\r\n" fairy')
     if story_name == "Sleeping Beauty":
         story_2 = story_2.replace('die . \r\nbaby', 'die . baby').replace('years . \r\n"', 'years . " \r\n')
+    if story_name == 'Hansel and Gretel':
+        story_2 = story_2.replace(' . \r\n" " Then', ' . " \r\n" Then').replace(' . \r\n"', ' . "\r\n')
     story_2_PhraseList = story_2.split('\r\n')
     print(story_2_PhraseList)
 
@@ -103,41 +105,6 @@ def story_analysis():
     counter_speech = False
 
     for i in range(len(story_2_PhraseList)):
-        speaker = ''
-        speak_to = ''
-        if '"' in story_2_PhraseList[i]:
-            counter_speech_ind = i
-            temp = story_2_PhraseList[i].split(' ')
-            # 找出speaker 待修正
-            if story_2_PhraseList[i].replace(' .', '').endswith('said '):
-                if temp[(len(story_2_PhraseList[i].split(' ')) - 5)] == 'and':
-                    speaker = temp[(len(story_2_PhraseList[i].split(' ')) - 6)] + ' and ' + temp[
-                        (len(story_2_PhraseList[i].split(' ')) - 4)]
-                else:
-                    speaker = temp[(len(story_2_PhraseList[i].split(' ')) - 4)]
-                # 改寫原句 將對話句子的說話者代名詞改為角色名稱
-                temp_phrase = storyPhraseList[i].split('" ')[1].split(' said')[0]
-                storyPhraseList[i] = storyPhraseList[i].replace(" " + temp_phrase + " ", speaker)
-            elif story_2_PhraseList[i].replace(' .', '').endswith('" '):
-                speaker = ''
-            else:
-                if temp[(len(story_2_PhraseList[i].split(' ')) - 4)] == 'and':
-                    speaker = temp[(len(story_2_PhraseList[i].split(' ')) - 5)] + ' and ' + temp[
-                        (len(story_2_PhraseList[i].split(' ')) - 3)]
-                else:
-                    speaker = temp[(len(story_2_PhraseList[i].split(' ')) - 3)]
-
-            # speak_to
-            if counter_speech and (i - counter_speech_ind) == 1:
-                speak_to = counter_speech_ind - 1
-            elif counter_speech and (i - counter_speech_ind) != 1:
-                if speaker in story_2_PhraseList[i]:
-                    speak_to = counter_speech_ind - 1
-
-            counter_speech = True
-        else:
-            counter_speech = False
-
         c1_list = []
         c2_list = []
         v_list = []
@@ -176,6 +143,66 @@ def story_analysis():
                             contain_keyword = True
                 continue
         print('S:' + str(c1_list) + ' V:' + str(v_list) + ' O:' + str(c2_list))
+
+        speaker = ''
+        speak_to = ''
+        if '"' in story_2_PhraseList[i]:
+            dialog_sentence = story_2_PhraseList[i].replace(' . ', '')
+            counter_speech_ind = i
+            if dialog_sentence.startswith('" '):
+                dialog_list = dialog_sentence.split(' " ')
+                if len(dialog_list) == 1:
+                    # 說話者為空
+                    speaker = ''
+                else:
+                    match = False
+                    temp = dialog_list[1].split(" ")
+                    for d_index in range(len(temp)):
+                        for index in range(len(v_list)):
+                            if temp[d_index] == v_list[index]:
+                                match = True
+                                if d_index == 0:
+                                    # "" say XXX
+                                    speaker = ' '.join(temp[1:])
+                                else:
+                                    # "" XXX say
+                                    speaker = ' '.join(temp[0:d_index])
+                                    # 改寫原句 將對話句子的說話者代名詞改為角色名稱
+                                    temp_phrase = storyPhraseList[i].split('" ')[1].split(' '+temp[d_index])[0]
+                                    storyPhraseList[i] = storyPhraseList[i].replace(" " + temp_phrase + " ", " " + speaker+' ')
+                                    print(storyPhraseList[i])
+                                break
+                        if match:
+                            break
+            else:
+                # XXX say ""
+                match = False
+                dialog_list = dialog_sentence.split(', " ')
+                temp = dialog_list[0].split(" ")
+                for d_index in range(len(temp)):
+                    for index in range(len(v_list)):
+                        if temp[d_index] == v_list[index]:
+                            match = True
+                            speaker = ' '.join(temp[0:d_index])
+                            # 改寫原句 將對話句子的說話者代名詞改為角色名稱
+                            temp_phrase = storyPhraseList[i].split(' "')[0].split(' '+temp[d_index])[0]
+                            storyPhraseList[i] = storyPhraseList[i].replace(" " + temp_phrase + " ", " " + speaker+' ')
+                            print(storyPhraseList[i])
+                            break
+                    if match:
+                        break
+            # speak_to
+            if counter_speech and (i - counter_speech_ind) == 1:
+                speak_to = counter_speech_ind - 1
+            elif counter_speech and (i - counter_speech_ind) != 1:
+                if speaker in story_2_PhraseList[i]:
+                    speak_to = counter_speech_ind - 1
+
+            counter_speech = True
+            print("說話者："+speaker)
+        else:
+            counter_speech = False
+
         translator = Translator()
         while True:
             try:
