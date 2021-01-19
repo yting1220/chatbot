@@ -6,8 +6,8 @@ from googletrans import Translator
 import createLibrary
 
 # 目前書單 >> "Fairy friends": "精靈", "Sleeping Beauty": "公主"
-story_name = "Fairy friends"
-story_type = "精靈"
+story_name = "Sleeping Beauty"
+story_type = "公主"
 content_list = []
 words = []
 entityInfo = {}
@@ -17,7 +17,7 @@ main_entity = []
 
 def createStory():
     global words
-    createLibrary.addBook(story_name, story_type)
+    # createLibrary.addBook(story_name, story_type)
     path = "story/" + story_name + ".txt"
     f = open(path, mode='r')
     words = f.read()
@@ -93,8 +93,6 @@ def story_analysis():
             'Patch . \r\nGo away', 'Patch . Go away').replace('elf ! " Lily', 'elf ! " \r\nLily').replace('too ! " fairy', 'too !\r\n" fairy')
     if story_name == "Sleeping Beauty":
         story_2 = story_2.replace('die . \r\nbaby', 'die . baby').replace('years . \r\n"', 'years . " \r\n')
-    if story_name == 'Hansel and Gretel':
-        story_2 = story_2.replace(' . \r\n" " Then', ' . " \r\n" Then').replace(' . \r\n"', ' . "\r\n')
     story_2_PhraseList = story_2.split('\r\n')
     print(story_2_PhraseList)
 
@@ -219,6 +217,10 @@ def story_analysis():
             except Exception as e:
                 print(e)
 
+        if speaker != '' and sentence_Translate.startswith('“'):
+            temp = sentence_Translate.split('”')
+            temp.reverse()
+            sentence_Translate = ''.join(temp)
         createLibrary.addBookInfo(story_name, c1_list, v_list, c2_list, story_2_PhraseList[i], sentence_Translate, i, speaker, speak_to, contain_keyword)
         contain_keyword = False
 
