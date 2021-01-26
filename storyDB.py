@@ -17,7 +17,7 @@ main_entity = []
 
 def createStory():
     global words
-    # createLibrary.addBook(story_name, story_type)
+    createLibrary.addBook(story_name, story_type)
     path = "story/" + story_name + ".txt"
     f = open(path, mode='r')
     words = f.read()
