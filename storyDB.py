@@ -5,9 +5,9 @@ from nltk.stem import WordNetLemmatizer
 from googletrans import Translator
 import createLibrary
 
-# 目前書單 >> "Fairy friends": "精靈", "Sleeping Beauty": "公主"
-story_name = "Sleeping Beauty"
-story_type = "公主"
+# 目前書單 >> "Fairy friends": "精靈", "Sleeping Beauty": "公主", "The Tale of Jemima Puddle-Duck": "鴨子"
+story_name = "Puss in Boots"
+story_type = "貓"
 content_list = []
 words = []
 entityInfo = {}
@@ -41,13 +41,16 @@ def coReference():
 
     content_list = result['document']
     # 找出代名詞對應主詞 修改原文
+    delchar = ['a ', 'the ', 'A ', "The "]
     for i in range(len(result['clusters'])):
         count = 0
         temp_name = ' '.join(result['document'][result['clusters'][i][0][0]:result['clusters'][i][0][1] + 1])
         # 額外處理
         if story_name == "Fairy friends" and temp_name == 'Patch , a bad elf':
             temp_name = 'Patch'
-        temp_name = temp_name.replace("a ", "").replace("the ", "").replace("The ", "").replace("A ", "")
+        for index in delchar:
+            if temp_name[0:2] == index or temp_name[0:4] == index:
+                temp_name = temp_name.replace(index, "")
         entity_list.append(temp_name)
         # print(temp_name)
 
@@ -82,7 +85,6 @@ def story_analysis():
     wnl = WordNetLemmatizer()
     verbName = []
     verbInfo = {}
-    contain_keyword = False
 
     storyPhraseList = words.split('\n')
 
@@ -93,8 +95,14 @@ def story_analysis():
             'Patch . \r\nGo away', 'Patch . Go away').replace('elf ! " Lily', 'elf ! " \r\nLily').replace('too ! " fairy', 'too !\r\n" fairy')
     if story_name == "Sleeping Beauty":
         story_2 = story_2.replace('die . \r\nbaby', 'die . baby').replace('years . \r\n"', 'years . " \r\n')
+    if story_name == "The Tale of Jemima Puddle-Duck":
+        story_2 = story_2.replace('safe . \r\n" ', 'safe . "\r\n').replace('nest . \r\nJemima', 'nest . Jemima').replace('dinner . \r\n" ', 'dinner . "\r\n').replace('shed . \r\n" ', 'shed . "\r\n')
+    if story_name == "Puss in Boots":
+        story_2 = story_2.replace('partridges . \r\n" ', 'partridges . "\r\n').replace('river . \r\n" ', 'river . "\r\n').replace('taken . \r\n" ', 'taken . "\r\n').replace('home . \r\n" ', 'home . "\r\n').replace('men master . \r\n" ', 'men master . "\r\n')\
+            .replace('? " ', '? "\r\n').replace('mouse . \r\n" ', 'mouse . "\r\n').replace('gifts . \r\nHow', 'gifts . How').replace('? "\r\nsaid', '? " said').replace('bag . \r\n" ', 'bag . "\r\n')
     story_2_PhraseList = story_2.split('\r\n')
-    print(story_2_PhraseList)
+    # for i in story_2_PhraseList:
+    #     print(i)
 
     # Dependency Parsing
     predictor = Predictor.from_path(
@@ -120,12 +128,9 @@ def story_analysis():
             if v == False and (result['pos'][j] == 'PROPN' or result['pos'][j] == 'NOUN'):
                 if result['words'][j] not in c1_list:
                     c1_list.append(result['words'][j])
-                    for index in main_entity:
-                        if result['words'][j] in index:
-                            contain_keyword = True
                 continue
-            if result['pos'][j] == 'VERB' and result['predicted_dependencies'][j] != 'aux':
-                if result['words'][j].lower() != 'will' and result['words'][j].lower() != 'can':
+            if (result['pos'][j] == 'VERB' and result['predicted_dependencies'][j] != 'aux') or (result['pos'][j] == 'AUX' and result['predicted_dependencies'][j] == 'root'):
+                if result['words'][j].lower() != 'can':
                     v = True
                     if result['words'][j] not in v_list:
                         v_list.append(result['words'][j].lower())
@@ -136,9 +141,6 @@ def story_analysis():
             if v == True and (result['pos'][j] == 'PROPN' or result['pos'][j] == 'NOUN'):
                 if result['words'][j] not in c2_list:
                     c2_list.append(result['words'][j])
-                    for index in main_entity:
-                        if result['words'][j] in index:
-                            contain_keyword = True
                 continue
         print('S:' + str(c1_list) + ' V:' + str(v_list) + ' O:' + str(c2_list))
 
@@ -176,7 +178,10 @@ def story_analysis():
                 # XXX say ""
                 match = False
                 dialog_list = dialog_sentence.split(', " ')
-                temp = dialog_list[0].split(" ")
+                if ', ' in dialog_list[0]:
+                    temp = dialog_list[0].split(", ")[1].split(" ")
+                else:
+                    temp = dialog_list[0].split(" ")
                 for d_index in range(len(temp)):
                     for index in range(len(v_list)):
                         if temp[d_index] == v_list[index]:
@@ -221,8 +226,7 @@ def story_analysis():
             temp = sentence_Translate.split('”')
             temp.reverse()
             sentence_Translate = ''.join(temp)
-        createLibrary.addBookInfo(story_name, c1_list, v_list, c2_list, story_2_PhraseList[i], sentence_Translate, i, speaker, speak_to, contain_keyword)
-        contain_keyword = False
+        createLibrary.addBookInfo(story_name, c1_list, v_list, c2_list, story_2_PhraseList[i], sentence_Translate, i, speaker, speak_to)
 
     for index in verbName:
         verbInfo[index] = {"Frequence": verbName.count(index)}
@@ -231,3 +235,5 @@ def story_analysis():
 
 if __name__ == "__main__":
     story_analysis()
+    # coReference()
+    # createStory()
