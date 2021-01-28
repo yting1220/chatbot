@@ -47,6 +47,8 @@ def coReference():
         # 額外處理
         if story_name == "Fairy friends" and temp_name == 'Patch , a bad elf':
             temp_name = 'Patch'
+        if story_name == 'Hansel and Gretel' and temp_name == 'I':
+            temp_name = 'Hansel'
         for index in delchar:
             if temp_name[0:2] == index or temp_name[0:4] == index:
                 temp_name = temp_name.replace(index, "")
@@ -211,7 +213,6 @@ def story_analysis():
                     speak_to = counter_speech_ind - 1
 
             counter_speech = True
-            print("說話者："+speaker)
         else:
             counter_speech = False
 
@@ -227,6 +228,8 @@ def story_analysis():
                         sentence_Translate = sentence_Translate.replace(word, 'Patch')
                     for word in missing_fairy:
                         sentence_Translate = sentence_Translate.replace(word, '精靈')
+                if story_name == 'Hansel and Gretel':
+                    sentence_Translate = sentence_Translate.replace('a夫', '樵夫')
                 break
             except Exception as e:
                 print(e)
