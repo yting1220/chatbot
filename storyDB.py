@@ -5,9 +5,8 @@ from nltk.stem import WordNetLemmatizer
 from googletrans import Translator
 import createLibrary
 
-# 目前書單 >> "Fairy friends": "精靈", "Sleeping Beauty": "公主", "The Tale of Jemima Puddle-Duck": "鴨子"
-story_name = "Puss in Boots"
-story_type = "貓"
+story_name = "Hansel and Gretel"
+story_type = "小孩"
 content_list = []
 words = []
 entityInfo = {}
@@ -89,6 +88,7 @@ def story_analysis():
     storyPhraseList = words.split('\n')
 
     story_2 = ' '.join(content_list)
+    print(story_2)
     story_2 = story_2.replace(' . ', ' . \r\n')
     if story_name == "Fairy friends":
         story_2 = story_2.replace('mouse ! mouse', 'mouse.\r\nmouse').replace('elf ! Patch', 'elf.\r\nPatch').replace(
@@ -100,9 +100,15 @@ def story_analysis():
     if story_name == "Puss in Boots":
         story_2 = story_2.replace('partridges . \r\n" ', 'partridges . "\r\n').replace('river . \r\n" ', 'river . "\r\n').replace('taken . \r\n" ', 'taken . "\r\n').replace('home . \r\n" ', 'home . "\r\n').replace('men master . \r\n" ', 'men master . "\r\n')\
             .replace('? " ', '? "\r\n').replace('mouse . \r\n" ', 'mouse . "\r\n').replace('gifts . \r\nHow', 'gifts . How').replace('? "\r\nsaid', '? " said').replace('bag . \r\n" ', 'bag . "\r\n')
+    if story_name == "Little Red Riding Hood":
+        story_2 = story_2.replace(' " " ', ' "\r\n" ').replace('up ! " ', 'up ! "\r\n').replace('closer . \r\n" ', 'closer . "\r\n')
+    if story_name == "The Magic Paintbrush":
+        story_2 = story_2.replace('wood . \r\nSui', 'wood . Sui').replace('bedroom ! ', 'bedroom ! \r\n').replace('face ! ', 'face ! \r\n').replace('magic ! ', 'magic ! \r\n').replace('people . \r\n" ', 'people . "\r\n').replace('snakes ! ', 'snakes ! \r\n').replace('go ! " ', 'go ! "\r\n').replace('money . \r\n" ', 'money . "\r\n').replace('Ming . \r\n" In', 'money . "\r\nIn')
+    if story_name == "Hansel and Gretel":
+        story_2 = story_2.replace('eat . \r\n" ', 'eat . "\r\n').replace('wood . \r\n" ', 'wood . "\r\n').replace('must . \r\n" ', 'must . "\r\n').replace('take . \r\n" ', 'take . "\r\n').replace('home . \r\n" ', 'home . "\r\n').replace('fire . \r\n" ', 'fire . "\r\n').replace('money . \r\n" ', 'money . "\r\n').replace('left . \r\n', 'left . ')
     story_2_PhraseList = story_2.split('\r\n')
-    # for i in story_2_PhraseList:
-    #     print(i)
+    for i in story_2_PhraseList:
+        print(i)
 
     # Dependency Parsing
     predictor = Predictor.from_path(
@@ -156,7 +162,10 @@ def story_analysis():
                     speaker = ''
                 else:
                     match = False
-                    temp = dialog_list[1].split(" ")
+                    if ', ' in dialog_list[1]:
+                        temp = dialog_list[1].split(", ")[0].split(" ")
+                    else:
+                        temp = dialog_list[1].split(" ")
                     for d_index in range(len(temp)):
                         for index in range(len(v_list)):
                             if temp[d_index] == v_list[index]:

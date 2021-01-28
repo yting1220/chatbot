@@ -144,5 +144,14 @@ def addElaboration(bookName, qa_id, elaboration, confidence, sentence_id):
     print(mydict)
 
 
+def addFeedback(userId, bookName, sentiment, feedback):
+    myClient = pymongo.MongoClient("mongodb://root:ltlab35316@140.115.53.196:27017/")
+    myBook = myClient[bookName.replace(' ', '_')]
+    Feedback_Table = myBook.Feedback
+    mydict = {'UserId': userId, 'Sentiment': sentiment, 'Content': feedback}
+    Feedback_Table.insert(mydict)
+    print(mydict)
+
+
 if __name__ == "__main__":
     addCommon()
