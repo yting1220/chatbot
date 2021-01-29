@@ -971,7 +971,7 @@ def expand(req, senta):
         # Senta情感分析
         input_dict = {"text": [userSay]}
         results = senta.sentiment_classify(data=input_dict)
-        if results[0]['sentiment_key'] == "positive":
+        if results[0]['sentiment_key'] == "positive" and results[0]['positive_probs'] >= 0.76:
             # 接續詢問使用者喜歡故事的原因
             find_common = {'type': 'common_like_response'}
             find_common2 = {'type': 'common_like_expand'}
@@ -1004,6 +1004,7 @@ def expand(req, senta):
     return response_dict
 
 
+# 從資料庫中取資料做為機器人給予學生之回饋
 def feedback(req):
     print('Feedback')
     global dialog_id
