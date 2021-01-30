@@ -32,7 +32,7 @@ book_match = False
 second_check = False
 second_match = False
 suggest_like = False
-dialog_id = 0
+dialog_id: int
 
 
 # 判斷是否為中文
@@ -75,18 +75,18 @@ def user_login():
 def start_chat(req):
     print("START")
     global user_id, second_check
-    user_id = req['intent']['query']
-    connect()
-    book_record = ''
     if second_check:
         response = ''
     else:
+        user_id = req['intent']['query']
+        connect()
+        book_record = ''
         find_condition = {'type': 'common_start'}
         find_result = myCommonList.find_one(find_condition)
         response = choice(find_result['content'])
         # 取得該使用者紀錄
         if list(myUserList.find()):
-            user_exist = myUserList.find_one({"User_id": 'Student ' + user_id})
+            user_exist = myUserList.find_one({"User_id": user_id})
             if user_exist is not None:
                 find_condition = {'type': 'common_combine'}
                 find_result = myCommonList.find_one(find_condition)
@@ -214,14 +214,19 @@ def match_book(req):
 
         nowBook = myClient[bookName]
         myVerbList = nowBook['VerbTable']
-
+        myDialogList = nowBook['S_R_Dialog']
+        dialog_index = myDialogList.find().count()
+        if dialog_index == 0:
+            dialog_id = 0
+        else:
+            dialog_id = myDialogList.find()[dialog_index - 1]['Dialog_id'] + 1
         find_common = {'type': 'common_book_T'}
         find_common_result = myCommonList.find_one(find_common)
         response = choice(find_common_result['content'])
 
         # 取得書本紀錄
         if list(myUserList.find()):
-            user_data_load = myUserList.find_one({"User_id": 'Student ' + user_id})
+            user_data_load = myUserList.find_one({"User_id": user_id})
             # 確認有該本書
             if user_data_load is not None and bookName in user_data_load["BookTalkSummary"].keys():
                 # 書本狀態紀錄為已完成
@@ -557,7 +562,7 @@ def evaluate(req, predictor):
                                     {"Sentence_id": similarity_index[0], "Student_elaboration": {'$exists': True}})
                                 if exist_elaboration is not None:
                                     # 若有學生曾輸入過的詮釋 > 回答該句
-                                    repeat_content.append(all_cursor[similarity_index[0]]['Student_elaboration'])
+                                    repeat_content.append(choice(all_cursor[similarity_index[0]]['Student_elaboration']))
                                 else:
                                     result = all_cursor[similarity_index[0]]['Sentence_translate']
                                     for word in ['。', '，', '！', '“', '”', '：']:
@@ -673,9 +678,15 @@ def repeat(req):
     else:
         # elaboration連結回故事ID 並存入故事中的句子作為機器人語料庫
         sentence_id = now_index[0]
-        find_story_sentence = {'Sentence_id': sentence_id}
-        newvalues = {"$set": {'Student_elaboration': now_user_say}}
-        myVerbList.update_one(find_story_sentence, newvalues)
+        exist_elaboration = myVerbList.find_one(
+            {'Sentence_id': sentence_id, "Student_elaboration": {'$exists': True}})
+        if exist_elaboration is not None:
+            student_elaboration = myVerbList.find_one({'Sentence_id': sentence_id})['Student_elaboration']
+            student_elaboration.append(now_user_say)
+        else:
+            student_elaboration = []
+        newvalues = {"$set": {'Student_elaboration': student_elaboration}}
+        myVerbList.update_one({'Sentence_id': sentence_id}, newvalues)
 
     if double_check:
         createLibrary.addElaboration(bookName, qa_id, now_user_say, confidence, sentence_id)
@@ -1019,15 +1030,18 @@ def feedback(req):
     find_result = myCommonList.find_one(find_common)
     find_feedback_student = {'type': 'common_feedback_student'}
     result_feedback_student = myCommonList.find_one(find_feedback_student)
-    if myFeedback.find().count() > 2:
-        choose_number = random.sample(range(0, myFeedback.find().count()-1), 2)
-        response = choice(find_result['content'])+" "+myFeedback.find()[choose_number[0]]['Content']+"，"+choice(result_feedback_student['content'])+" "+myFeedback.find()[choose_number[1]]['Content']
-    elif myFeedback.find().count() == 2:
-        response = choice(find_result['content']) + " " + myFeedback.find()[0]['Content'] + "，" + choice(
-            result_feedback_student['content']) + " " + myFeedback.find()[1]['Content']
+    find_like = {'Sentiment': suggest_like}
+    result_like = myFeedback.find(find_like)
+    if result_like.count() > 2:
+        choose_number = random.sample(range(0, result_like.count()-1), 2)
+        response = choice(find_result['content'])+" "+result_like[choose_number[0]]['Content']+"，"+choice(result_feedback_student['content'])+" "+result_like[choose_number[1]]['Content']
+    elif result_like.count() == 2:
+        response = choice(find_result['content']) + " " + result_like[0]['Content'] + "，" + choice(
+            result_feedback_student['content']) + " " + result_like[1]['Content']
     else:
         choose_number = 0
-        response = choice(find_result['content'])+" "+myFeedback.find()[choose_number]['Content']
+        response = choice(find_result['content'])+" "+result_like[choose_number]['Content']
+    response += '\n'
     response_dict = {"prompt": {
         "firstSimple": {
             "speech": response,
