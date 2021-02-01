@@ -8,8 +8,10 @@ import chatbot_func
 app = Flask(__name__)
 
 
-@app.route('/', methods=['POST'])
-def webhook():
+# @app.route('/', methods=['POST'])
+@app.route("/callback", methods=['POST'])
+# def webhook():
+def callback():
     req = request.get_json()
     print(req)
     try:
@@ -31,4 +33,5 @@ if __name__ == "__main__":
     senta = hub.Module(name="senta_bilstm")
     predictor = Predictor.from_path(
         "https://storage.googleapis.com/allennlp-public-models/biaffine-dependency-parser-ptb-2020.04.06.tar.gz")
-    app.run(debug=True, port=8888)
+    # app.run(debug=True, port=8888)
+    app.run()
