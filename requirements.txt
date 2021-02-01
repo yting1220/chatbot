@@ -1,14 +1,10 @@
-from allennlp.predictors.predictor import Predictor
-from flask import Flask, request, jsonify
-from nltk.corpus import wordnet as wn
-import paddlehub as hub
-import nltk
-from random import choice
-from googletrans import Translator
-from nltk.corpus import wordnet as wn
-from nltk.corpus import stopwords
-from strsimpy.cosine import Cosine
-import pymongo
-import random
-import copy
-import os
+allennlp==1.0.0
+allennlp-models==1.0.0
+Flask
+nltk
+paddlehub
+googletrans==4.0.0-rc1
+strsimpy
+pymongo
+random
+copy
