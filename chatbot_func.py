@@ -6,6 +6,7 @@ from strsimpy.cosine import Cosine
 import pymongo
 import createLibrary
 import random
+import os
 myClient: object
 myBotData: object
 myBookList: object
@@ -223,7 +224,7 @@ def match_book(req):
         find_common = {'type': 'common_book_T'}
         find_common_result = myCommonList.find_one(find_common)
         response = choice(find_common_result['content'])
-
+        result = ''
         # 取得書本紀錄
         if list(myUserList.find()):
             user_data_load = myUserList.find_one({"User_id": user_id})
@@ -243,19 +244,13 @@ def match_book(req):
                     find_common_combine = {'type': 'common_combine'}
                     common_combine = myCommonList.find_one(find_common_combine)
                     if list(record_list):
+                        temp_list = record_list[-3:]
                         second_login = True
-                        if len(record_list) > 1:
-                            if len(record_list) == 1:
-                                result = myVerbList.find_one({"Sentence_id": int(record_list[0])})["Sentence_translate"]
-                            elif len(record_list) == 2:
-                                result = myVerbList.find_one({"Sentence_id": int(record_list[0])})["Sentence_translate"] + choice(common_combine['content']) + myVerbList.find_one({"Sentence_id": int(record_list[1])})["Sentence_translate"]
+                        for index in range(len(temp_list)):
+                            if index > 0:
+                                result += choice(common_combine['content']) + ' ' + myVerbList.find_one({"Sentence_id": int(temp_list[index])})["Sentence_translate"]
                             else:
-                                result = myVerbList.find_one({"Sentence_id": int(record_list[-3])})["Sentence_translate"]
-                                for i in range(len(record_list)):
-                                    if i < 3:
-                                        result += choice(common_combine['content']) + myVerbList.find_one({"Sentence_id": int(record_list[i-2])})["Sentence_translate"]
-                        else:
-                            result = myVerbList.find_one({"Sentence_id": int(record_list[0])})["Sentence_translate"]
+                                result = myVerbList.find_one({"Sentence_id": int(temp_list[index])})["Sentence_translate"]
 
                         for word in ['。', '，', '！', '“', '”', '：']:
                             result = result.replace(word, '')
@@ -829,6 +824,10 @@ def inquire(req):
     find_common_result_2 = myCommonList.find_one(find_common_2)
     response = choice(find_common_result['content']) + " " + result['Elaboration'] + "，" + choice(
         find_common_result_2['content'])
+    if result['Sentence_id'] != '':
+        record_list.append(result['Sentence_id'])
+        now_index.append(result['Sentence_id'])
+
     # 記錄對話過程
     createLibrary.addDialog(bookName, session_id, dialog_id, 'chatbot', response, time)
     dialog_id += 1
@@ -1065,26 +1064,44 @@ def feedback(req):
 def suggestion(req):
     print("Suggestion")
     global dialog_id, suggest_like
+    connect()
     time = req['user']['lastSeenTime']
     session_id = req['session']['id']
+    suggest_book = {}
+    stop_words = list(stopwords.words('english'))
+    for i in range(len(stop_words)):
+        stop_words[i] = " " + stop_words[i] + " "
+    stop_words.extend(['.', ',', '"', '!', "'s", '?'])
+    # 與資料庫中其他書的內容作相似度比對
+    sample_book = myBookList.find_one({'bookName': bookName.replace('_', ' ')})['story_content']
+    comparison_book = myBookList.find({'bookName': {'$ne': bookName.replace('_', ' ')}})
+    for word in stop_words:
+        sample_book = sample_book.replace(word, ' ')
+    for book in comparison_book:
+        for word in stop_words:
+            story_content = book['story_content'].replace(word, ' ')
+        cosine = Cosine(2)
+        p1 = cosine.get_profile(sample_book.replace('   ', ' ').replace('  ', ' '))
+        p2 = cosine.get_profile(story_content.replace('   ', ' ').replace('  ', ' '))
+        suggest_book[book['bookName']] = cosine.similarity_profiles(p1, p2)
+    find_condition = {'type': 'common_combine'}
+    result_combine = myCommonList.find_one(find_condition)
+    like_str = ''
     if suggest_like:
+        # 學生喜歡則列出前3高相似度的書籍
         find_common = {'type': 'common_like_T'}
         find_result = myCommonList.find_one(find_common)
-        bookName_match = bookName.replace('_', ' ')
-        book_type = myBookList.find_one({'bookName': bookName_match})['type']
-        allType_result = myBookList.find({'type': book_type})
-        for result in allType_result:
-            bookName_match = result['bookName']
-            if bookName_match != bookName.replace('_', ' '):
-                break
-        # 待處理沒有相同類型的部分 > 用跟suggest_F一樣的句子
-        response = choice(find_result['content']).replace('OO', book_type).replace('XX', bookName_match)
+        sort_suggest_book = sorted(suggest_book.items(), key=lambda x: x[1], reverse=True)
     else:
         find_common = {'type': 'common_like_F'}
         find_result = myCommonList.find_one(find_common)
-        book_type = myBookList.find_one({'bookName': bookName.replace('_', ' ')})['type']
-        other_book = myBookList.find_one({'type': {'$ne': book_type}})['bookName']
-        response = choice(find_result['content']).replace('XX', other_book)
+        sort_suggest_book = sorted(suggest_book.items(), key=lambda x: x[1], reverse=False)
+    for index in range(len(sort_suggest_book[0:3])):
+        if index > 0:
+            like_str += choice(result_combine['content']) + sort_suggest_book[index][0]
+        else:
+            like_str += sort_suggest_book[index][0]
+    response = choice(find_result['content']).replace('XX', like_str)
 
     response_dict = {"prompt": {
         "firstSimple": {
