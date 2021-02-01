@@ -6,20 +6,18 @@ from googletrans import Translator
 import createLibrary
 
 story_name = "Hansel and Gretel"
-story_type = "小孩"
 content_list = []
 words = []
 entityInfo = {}
-entity_list = []
-main_entity = []
 
 
 def createStory():
     global words
-    createLibrary.addBook(story_name, story_type)
     path = "story/" + story_name + ".txt"
     f = open(path, mode='r')
     words = f.read()
+    story_content = words.replace('\n', ' ')
+    createLibrary.addBook(story_name, story_content)
     f.close()
 
 
@@ -27,8 +25,7 @@ def coReference():
     # 紀錄每個角色出現次數
     # tempMax = 0
     # tempProtagonist = ''
-    global content_list, entityInfo, entity_list, main_entity
-    sort_entity = {}
+    global content_list, entityInfo
     createStory()
     content = words.replace('\n', ' ')
     predictor = Predictor.from_path(
@@ -52,7 +49,6 @@ def coReference():
         for index in delchar:
             if temp_name[0:2] == index or temp_name[0:4] == index:
                 temp_name = temp_name.replace(index, "")
-        entity_list.append(temp_name)
         # print(temp_name)
 
         for j in result['clusters'][i]:
@@ -69,16 +65,8 @@ def coReference():
             # tempProtagonist = temp_name
 
         entityInfo[temp_name] = {"Frequence": count}
-        sort_entity[temp_name] = count
         # print("出現次數：" + str(count), end='\r\n\r\n')
     # print('主角出現'+str(tempMax) + "次：" + tempProtagonist + '\n')
-
-    # 排序entity 判斷出現次數高者為主要角色
-    main_entity = []
-    sort_entity = sorted(sort_entity.items(), key=lambda x: x[1], reverse=True)
-    temp = int(len(sort_entity) * 0.3)
-    for i in sort_entity[:temp]:
-        main_entity.append(i[0])
 
 
 def story_analysis():

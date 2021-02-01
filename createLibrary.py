@@ -24,12 +24,13 @@ def connect():
     return myBookList, myCommonList
 
 
-def addBook(bookName, bookType):
+def addBook(bookName, story_content):
     connect()
     # 新增書單
     translator = Translator()
-    book_dict = {'type': bookType, 'bookName': bookName,
-                 'bookNameTranslated': translator.translate(bookName, src="en", dest="zh-TW").text}
+    book_dict = {'bookName': bookName,
+                 'bookNameTranslated': translator.translate(bookName, src="en", dest="zh-TW").text,
+                 'story_content': story_content}
     myBookList.insert_one(book_dict)
     print(book_dict)
 
