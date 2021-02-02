@@ -77,13 +77,13 @@ def addBookKeyword(bookName, entityList, verbList):
     print(mydict)
 
 
-def updateUser(userId, bookName, record_list, match_entity, match_verb, state):
+def updateUser(userId, bookName, match_sentence, record_list, match_entity, match_verb, state):
     # 連接mongo
 
     myClient = pymongo.MongoClient("mongodb://root:ltlab35316@140.115.53.196:27017/")
     myBotData = myClient.Chatbot
     myUserList = myBotData.UserTable
-    bookTalkSummary = {'Sentence_id_list': record_list, 'Entity_list': match_entity,
+    bookTalkSummary = {'Match_sentence': match_sentence, 'Sentence_id_list': record_list, 'Entity_list': match_entity,
                        'Verb_list': match_verb, 'Finish': state}
 
     if not list(myUserList.find()):
