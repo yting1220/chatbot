@@ -2,6 +2,7 @@ Flask
 nltk
 paddlepaddle
 paddlehub
+matplotlib
 googletrans==4.0.0-rc1
 strsimpy
 pymongo
