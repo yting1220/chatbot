@@ -1,6 +1,10 @@
 Flask
 nltk
+paddlepaddle
 paddlehub
+matplotlib
 googletrans==4.0.0-rc1
 strsimpy
 pymongo
+allennlp==1.0.0
+allennlp-models==1.0.0
