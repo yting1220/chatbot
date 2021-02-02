@@ -31,4 +31,4 @@ if __name__ == "__main__":
     senta = hub.Module(name="senta_bilstm")
     predictor = Predictor.from_path(
         "https://storage.googleapis.com/allennlp-public-models/biaffine-dependency-parser-ptb-2020.04.06.tar.gz")
-    app.run(debug=True, port=5000)
+    app.run(debug=True, port=8080)
