@@ -6,7 +6,6 @@ from strsimpy.cosine import Cosine
 import pymongo
 import createLibrary
 import random
-import os
 myClient: object
 myBotData: object
 myBookList: object
