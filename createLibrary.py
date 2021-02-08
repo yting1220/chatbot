@@ -60,9 +60,9 @@ def addBookInfo(bookName, c1, verb, c2, sentence, sentence_Translate, sentenceID
     myBook = myClient[bookName.replace(' ', '_')]
     myVerbList = myBook.VerbTable
 
-    mydict = {'Sentence_id': sentenceID, 'C1': c1, 'Verb': verb, 'C2': c2, 'Sentence': sentence,
-              'Sentence_translate': sentence_Translate, 'Speaker': speaker, 'Speak_to': speak_to}
-    myVerbList.insert(mydict)
+    mydict = {'Sentence_id': sentenceID, 'C1': c1, 'VERB': verb, 'C2': c2, 'Sentence': sentence,
+              'Sentence_translated': sentence_Translate, 'Speaker': speaker, 'Speak_to': speak_to}
+    myVerbList.insert_one(mydict)
     print(mydict)
 
 
@@ -73,7 +73,7 @@ def addBookKeyword(bookName, entityList, verbList):
     myKeyList = myBook.KeywordTable
 
     mydict = {'Entity_List': entityList, 'Verb_List': verbList}
-    myKeyList.insert(mydict)
+    myKeyList.insert_one(mydict)
     print(mydict)
 
 
@@ -89,7 +89,7 @@ def updateUser(userId, bookName, match_sentence, record_list, match_entity, matc
     if not list(myUserList.find()):
         # 資料庫無資料 > 直接新增一筆
         mydict = {'User_id': userId, 'BookTalkSummary': {bookName: bookTalkSummary}}
-        myUserList.insert(mydict)
+        myUserList.insert_one(mydict)
     else:
         find_user = {'User_id': userId}
         now_user = myUserList.find_one(find_user)
@@ -97,7 +97,7 @@ def updateUser(userId, bookName, match_sentence, record_list, match_entity, matc
         if now_user is None:
             # 直接新增一筆
             mydict = {'User_id': userId, 'BookTalkSummary': {bookName: bookTalkSummary}}
-            myUserList.insert(mydict)
+            myUserList.insert_one(mydict)
         # 有該使用者資料
         else:
             if bookName in now_user['BookTalkSummary']:
@@ -121,7 +121,7 @@ def addDialog(bookName, session_id, dialog_id, speaker_id, content, time):
 
     mydict = {'Session_id': session_id, 'Dialog_id': dialog_id, 'Speaker_id': speaker_id, 'Content': content,
               'Time': time}
-    allDialog.insert(mydict)
+    allDialog.insert_one(mydict)
     print(mydict)
 
 
@@ -131,7 +131,7 @@ def addQuestion(bookName, qa_id, dialog_id, response):
     QATable = myBook.QATable
 
     mydict = {'QA_id': qa_id, 'Dialog_id': dialog_id, 'Response': response}
-    QATable.insert(mydict)
+    QATable.insert_one(mydict)
     print(mydict)
 
 
@@ -141,7 +141,7 @@ def addElaboration(bookName, qa_id, elaboration, confidence, sentence_id):
     Elaboration_Table = myBook.Elaboration
 
     mydict = {'QA_id': qa_id, 'Elaboration': elaboration, 'Confidence': confidence, 'Sentence_id': sentence_id}
-    Elaboration_Table.insert(mydict)
+    Elaboration_Table.insert_one(mydict)
     print(mydict)
 
 
@@ -150,7 +150,7 @@ def addFeedback(userId, bookName, sentiment, feedback):
     myBook = myClient[bookName.replace(' ', '_')]
     Feedback_Table = myBook.Feedback
     mydict = {'UserId': userId, 'Sentiment': sentiment, 'Content': feedback}
-    Feedback_Table.insert(mydict)
+    Feedback_Table.insert_one(mydict)
     print(mydict)
 
 

@@ -13,7 +13,13 @@ def webhook():
     req = request.get_json()
     print(req)
     try:
-        if req['handler']['name'] == 'evaluate':
+        if req['handler']['name'] == 'actions.handler.HEALTH_CHECK':
+            response_dict = {"scene": {
+                "next": {
+                    'name': 'End conversation'
+                }
+            }}
+        elif req['handler']['name'] == 'evaluate':
             response_dict = getattr(chatbot_func, req['handler']['name'])(req, predictor)
         elif req['handler']['name'] == 'expand':
             response_dict = getattr(chatbot_func, req['handler']['name'])(req, senta)
@@ -21,7 +27,6 @@ def webhook():
             response_dict = getattr(chatbot_func, req['handler']['name'])(req)
     except TypeError:
         response_dict = getattr(chatbot_func, req['handler']['name'])()
-
     return jsonify(response_dict)
 
 

@@ -1,25 +1,19 @@
 from random import choice
 from googletrans import Translator
-from nltk.corpus import wordnet as wn
+from nltk.corpus import wordnet
 from nltk.corpus import stopwords
 from strsimpy.cosine import Cosine
 import pymongo
 import createLibrary
 import random
+
 myClient: object
 myBotData: object
 myBookList: object
 myCommonList: object
-myVerbList: object
 myUserList: object
-nowBook: object
 
-bookName = ''
-record_list = []
 repeat_content = []
-match_entity = []
-match_verb = []
-user_id = ''
 now_index = []
 now_user_say = ''
 firstTime: bool
@@ -33,7 +27,6 @@ second_check = False
 second_match = False
 suggest_like = False
 dialog_id: int
-match_sentence = 0
 
 
 # 判斷是否為中文
@@ -62,7 +55,7 @@ def connect():
 # 詢問座號
 def user_login():
     print("START")
-    response = '哈囉~請先告訴我你的座號唷~'
+    response = '哈囉！請先告訴我你的班級和座號唷！'
     response_dict = {"prompt": {
         "firstSimple": {
             "speech": response,
@@ -75,11 +68,11 @@ def user_login():
 # 詢問書名
 def start_chat(req):
     print("START")
-    global user_id, second_check
+    global second_check
     if second_check:
         response = ''
     else:
-        user_id = req['intent']['query']
+        user_id = req['session']['params']['User_id']
         connect()
         book_record = ''
         find_condition = {'type': 'common_start'}
@@ -113,9 +106,10 @@ def start_chat(req):
 
 def check_book(req):
     print('CHECK')
-    global book_match, bookName, second_match, second_check
+    global book_match, second_match, second_check
     second_check = True
     userSay = req['intent']['query']
+    user_id = req['session']['params']['User_id']
     connect()
     if second_match:
         response_dict = {"scene": {
@@ -134,12 +128,18 @@ def check_book(req):
         if find_result_cursor.count() != 0:
             if find_result_cursor.count() == 1:
                 book_match = True
-                bookName = find_result_cursor[0]['bookName'].replace(' ', '_')
                 response_dict = {"scene": {
                     "next": {
                         'name': 'Match_book'
+                    }},
+                    "session": {
+                        "params": {
+                            'User_say': userSay,
+                            'User_id': user_id,
+                            'User_book': find_result_cursor[0]['bookName']
+                        }
                     }
-                }}
+                }
             else:
                 allBook = ''
                 for index in range(find_result_cursor.count()):
@@ -148,13 +148,13 @@ def check_book(req):
                     else:
                         allBook += "、" + find_result_cursor[index]['bookName']
                 print(allBook)
-                response = '我有看過'+allBook+" 你是在指哪一本故事呢?"
+                response = '我有看過' + allBook + " 你是在指哪一本故事呢?"
                 response_dict = {"prompt": {
                     "firstSimple": {
                         "speech": response,
                         "text": response
-                    }
-                }}
+                    }}
+                }
                 second_match = True
         else:
             book_match = False
@@ -170,7 +170,7 @@ def check_book(req):
 # 確認書本是否有紀錄
 def match_book(req):
     print('Match_record')
-    global nowBook, bookName, myVerbList, firstTime, dialog_id, qa_id, double_check, second_login, record_list, match_entity, match_verb, state, book_match, second_match, second_check, match_sentence
+    global firstTime, dialog_id, qa_id, double_check, second_login, state, book_match, second_match, second_check
     record_search = False
     userSay = req['intent']['query']
     time = req['user']['lastSeenTime']
@@ -178,6 +178,12 @@ def match_book(req):
     check_Match = False
     connect()
     response = ''
+    record_list = []
+    match_verb = []
+    match_entity = []
+    input_sentence = 0
+    bookName = ''
+    user_id = req['session']['params']['User_id']
 
     if second_match:
         if is_all_chinese(userSay):
@@ -187,7 +193,7 @@ def match_book(req):
         find_result_cursor = myBookList.find_one(find_condition)
         if find_result_cursor is not None:
             record_search = True
-            bookName = find_result_cursor['bookName'].replace(' ', '_')
+            bookName = find_result_cursor['bookName']
             print(find_result_cursor)
         else:
             find_common = {'type': 'common_book_F'}
@@ -197,6 +203,7 @@ def match_book(req):
         if book_match:
             # 比對成功
             record_search = True
+            bookName = req['session']['params']['User_book']
             print(bookName)
         else:
             # 比對失敗
@@ -213,7 +220,7 @@ def match_book(req):
         state = False
         second_login = False
 
-        nowBook = myClient[bookName]
+        nowBook = myClient[bookName.replace(' ', '_')]
         myVerbList = nowBook['VerbTable']
         myDialogList = nowBook['S_R_Dialog']
         dialog_index = myDialogList.find().count()
@@ -238,7 +245,7 @@ def match_book(req):
                     check_Match = False
                 else:
                     # 抓出過去的故事資料
-                    match_sentence = user_data_load["BookTalkSummary"][bookName]["Match_sentence"]
+                    input_sentence = user_data_load["BookTalkSummary"][bookName]["Input_count"]
                     record_list = user_data_load["BookTalkSummary"][bookName]["Sentence_id_list"]
                     match_entity = user_data_load["BookTalkSummary"][bookName]["Entity_list"]
                     match_verb = user_data_load["BookTalkSummary"][bookName]["Verb_list"]
@@ -249,9 +256,12 @@ def match_book(req):
                         second_login = True
                         for index in range(len(temp_list)):
                             if index > 0:
-                                result += choice(common_combine['content']) + ' ' + myVerbList.find_one({"Sentence_id": int(temp_list[index])})["Sentence_translate"]
+                                result += choice(common_combine['content']) + ' ' + \
+                                          myVerbList.find_one({"Sentence_id": int(temp_list[index])})[
+                                              "Sentence_translated"]
                             else:
-                                result = myVerbList.find_one({"Sentence_id": int(temp_list[index])})["Sentence_translate"]
+                                result = myVerbList.find_one({"Sentence_id": int(temp_list[index])})[
+                                    "Sentence_translated"]
 
                         for word in ['。', '，', '！', '“', '”', '：']:
                             result = result.replace(word, '')
@@ -274,7 +284,11 @@ def match_book(req):
                 "next": {
                     'name': 'Prompt'
                 }
-            }
+            },
+            "session": {
+                "params": dict(User_say=userSay, User_id=user_id, User_book=bookName, User_record_list=record_list,
+                               User_matchEntity=match_entity, User_matchVerb=match_verb, User_inputCount=input_sentence,
+                               User_noMatch=0)}
         }
     else:
         response_dict = {"prompt": {
@@ -298,7 +312,8 @@ def match_book(req):
 # 聊書引導
 def prompt(req):
     print("PROMPT")
-    global dialog_id, second_login, state
+    global dialog_id, second_login
+    bookName = req['session']['params']['User_book']
     time = req['user']['lastSeenTime']
     session_id = req['session']['id']
     connect()
@@ -336,9 +351,18 @@ def prompt(req):
 # 比對故事內容
 def evaluate(req, predictor):
     print("EVALUATE")
-    global now_user_say, repeat_content, record_list, match_verb, match_entity, firstTime, now_index, dialog_id, qa_id, double_check, state, match_sentence
+    global now_user_say, repeat_content, firstTime, now_index, dialog_id, qa_id, double_check
     firstTime = False
+    input_sentence = req['session']['params']['User_inputCount']
+    noMatch_count = req['session']['params']['User_noMatch']
+    user_id = req['session']['params']['User_id']
+    bookName = req['session']['params']['User_book']
+    record_list = req['session']['params']['User_record_list']
+    match_entity = req['session']['params']['User_matchEntity']
+    match_verb = req['session']['params']['User_matchVerb']
+    nowBook = myClient[bookName.replace(' ', '_')]
     myQATable = nowBook['QATable']
+    myVerbList = nowBook['VerbTable']
     userSay = req['intent']['query']
     time = req['user']['lastSeenTime']
     session_id = req['session']['id']
@@ -356,19 +380,22 @@ def evaluate(req, predictor):
             }
         }
     else:
+        input_sentence += 1
         no_match = False
         now_index = []
         repeat_content = []
         response = ''
         response_dict = {}
         stop_words = list(stopwords.words('english'))
-        for i in ["yourself", "there", "once", "having", "they", "its", "yours", "itself", "is", "him", "themselves", "are",
+        for i in ["yourself", "there", "once", "having", "they", "its", "yours", "itself", "is", "him", "themselves",
+                  "are",
                   "we", "these", "your", "his", "me", "were", "her", "himself", "this", "our", "their", "ours", "had",
-                  "she", "all", "no", "them", "same", "been", "have", "yourselves", "he", "you", "herself", "has", "myself",
+                  "she", "all", "no", "them", "same", "been", "have", "yourselves", "he", "you", "herself", "has",
+                  "myself",
                   "those", "i", "being", "theirs", "my", "against", "it", "she's", 'hers']:
             stop_words.remove(i)
         for i in range(len(stop_words)):
-            stop_words[i] = " "+stop_words[i]+" "
+            stop_words[i] = " " + stop_words[i] + " "
         stop_words.extend([' . ', ' , ', '"', ' ! '])
         connect()
 
@@ -428,7 +455,8 @@ def evaluate(req, predictor):
                         if result['words'][j] not in user_c1:
                             user_c1.append(result['words'][j])
                         continue
-                    if (result['pos'][j] == 'VERB' and result['predicted_dependencies'][j] != 'aux') or (result['pos'][j] == 'AUX' and result['predicted_dependencies'][j] == 'root'):
+                    if (result['pos'][j] == 'VERB' and result['predicted_dependencies'][j] != 'aux') or (
+                            result['pos'][j] == 'AUX' and result['predicted_dependencies'][j] == 'root'):
                         v = True
                         if result['words'][j] not in user_v:
                             user_v.append(result['words'][j])
@@ -453,7 +481,7 @@ def evaluate(req, predictor):
                         checkVerb = False
 
                         story_c1 = myVerbList.find_one({"Sentence_id": similarity_index[0]})['C1']
-                        story_v = myVerbList.find_one({"Sentence_id": similarity_index[0]})['Verb']
+                        story_v = myVerbList.find_one({"Sentence_id": similarity_index[0]})['VERB']
                         story_c2 = myVerbList.find_one({"Sentence_id": similarity_index[0]})['C2']
 
                         if list(story_c1) and list(story_v) and list(story_c2):
@@ -478,18 +506,19 @@ def evaluate(req, predictor):
                                 word_morphy = []
                                 word_case = []
                                 for word in user_v:
-                                    for i in wn._morphy(word, pos='v'):
+                                    for i in wordnet._morphy(word, pos='v'):
                                         word_morphy.append(i)
                                 for index in word_morphy:
                                     while True:
                                         try:
                                             trans_word_pre = translator.translate(index, src='en', dest="zh-TW").text
-                                            trans_word = translator.translate(trans_word_pre, dest="en").extra_data['parsed']
+                                            trans_word = translator.translate(trans_word_pre, dest="en").extra_data[
+                                                'parsed']
                                             if len(trans_word) > 3:
                                                 for i in trans_word[3][5][0]:
                                                     if i[0] == 'verb':
-                                                        for index in i[1]:
-                                                            word_case.append(index[0])
+                                                        for trans_word_index in i[1]:
+                                                            word_case.append(trans_word_index[0])
                                                         break
                                             break
                                         except Exception as translator_error:
@@ -498,7 +527,7 @@ def evaluate(req, predictor):
                                 print(word_case)
                                 for index in word_case:
                                     for v_index in story_v:
-                                        verb_allResult = wn._morphy(v_index, pos='v')
+                                        verb_allResult = wordnet._morphy(v_index, pos='v')
                                         for j in verb_allResult:
                                             if j == index:
                                                 print(index)
@@ -518,7 +547,8 @@ def evaluate(req, predictor):
                                     while True:
                                         try:
                                             trans_word_pre = translator.translate(word, src='en', dest="zh-TW").text
-                                            trans_word = translator.translate(trans_word_pre, dest="en").extra_data['parsed']
+                                            trans_word = translator.translate(trans_word_pre, dest="en").extra_data[
+                                                'parsed']
                                             if len(trans_word) > 3:
                                                 for i in trans_word[3][5][0]:
                                                     if i[0] == 'noun':
@@ -548,7 +578,6 @@ def evaluate(req, predictor):
                                 no_match = False
                                 if similarity_index[0] not in record_list:
                                     record_list.append(similarity_index[0])
-                                    match_sentence += 1
                                 now_index.append(similarity_index[0])
                                 # 比對成功
                                 find_common = {'type': 'common_match_T'}
@@ -556,12 +585,13 @@ def evaluate(req, predictor):
                                 response = choice(find_common_result['content'])
 
                                 exist_elaboration = myVerbList.find_one(
-                                    {"Sentence_id": similarity_index[0], "Student_elaboration": {'$exists': True}})
+                                    {"Sentence_id": similarity_index[0], "Student_Elaboration": {'$exists': True}})
                                 if exist_elaboration is not None:
                                     # 若有學生曾輸入過的詮釋 > 回答該句
-                                    repeat_content.append(choice(all_cursor[similarity_index[0]]['Student_elaboration']))
+                                    repeat_content.append(
+                                        choice(all_cursor[similarity_index[0]]['Student_Elaboration']))
                                 else:
-                                    result = all_cursor[similarity_index[0]]['Sentence_translate']
+                                    result = all_cursor[similarity_index[0]]['Sentence_translated']
                                     for word in ['。', '，', '！', '“', '”', '：']:
                                         result = result.replace(word, ' ')
                                     repeat_content.append(result)
@@ -578,7 +608,12 @@ def evaluate(req, predictor):
                                         "next": {
                                             'name': 'REPEAT'
                                         }
-                                    }
+                                    },
+                                    "session": {
+                                        "params": dict(User_say=userSay, User_id=user_id, User_book=bookName,
+                                                       User_record_list=record_list, User_matchEntity=match_entity,
+                                                       User_matchVerb=match_verb, User_inputCount=input_sentence,
+                                                       User_noMatch=noMatch_count)}
                                 }
                                 break
                             else:
@@ -596,7 +631,12 @@ def evaluate(req, predictor):
                         "next": {
                             'name': 'Elaboration'
                         }
-                    }
+                    },
+                        "session": {
+                            "params": dict(User_say=userSay, User_id=user_id, User_book=bookName,
+                                           User_record_list=record_list, User_matchEntity=match_entity,
+                                           User_matchVerb=match_verb, User_inputCount=input_sentence,
+                                           User_noMatch=noMatch_count)}
                     }
                 else:
                     all_QA_cursor = myQATable.find()
@@ -613,23 +653,27 @@ def evaluate(req, predictor):
                             if cosine.similarity_profiles(p1, p2) >= 0.7:
                                 qa_id = cursor['QA_id']
                                 QAMatch = True
-                                # 比對到QA也算在學生有比對到的句數中
-                                match_sentence += 1
                                 response_dict = {
                                     "scene": {
                                         "next": {
                                             'name': 'INQUIRE'
                                         }
-                                    }
+                                    },
+                                    "session": {
+                                        "params": dict(User_say=userSay, User_id=user_id, User_book=bookName,
+                                                       User_record_list=record_list, User_matchEntity=match_entity,
+                                                       User_matchVerb=match_verb, User_inputCount=input_sentence,
+                                                       User_noMatch=noMatch_count)}
                                 }
                                 break
                     if all_QA_cursor is None or not QAMatch:
+                        noMatch_count += 1
                         if all_QA_cursor is None:
                             qa_id = 1
                         else:
                             qa_id = all_QA_cursor.count() + 1
 
-                        # 存入比對不到的使用者對話similarity_sentence
+                        # 存入比對不到的使用者對話
                         createLibrary.addQuestion(bookName, qa_id, dialog_id - 1, userSay)
 
                         # 請使用者補充說明
@@ -652,7 +696,12 @@ def evaluate(req, predictor):
                                 "next": {
                                     'name': 'Prompt'
                                 }
-                            }
+                            },
+                            "session": {
+                                "params": dict(User_say=userSay, User_id=user_id, User_book=bookName,
+                                               User_record_list=record_list, User_matchEntity=match_entity,
+                                               User_matchVerb=match_verb, User_inputCount=input_sentence,
+                                               User_noMatch=noMatch_count)}
                         }
 
     print(response)
@@ -663,6 +712,9 @@ def evaluate(req, predictor):
 def repeat(req):
     print("REPEAT")
     global dialog_id, double_check
+    bookName = req['session']['params']['User_book']
+    nowBook = myClient[bookName.replace(' ', '_')]
+    myVerbList = nowBook['VerbTable']
     time = req['user']['lastSeenTime']
     session_id = req['session']['id']
     response = ''
@@ -678,13 +730,14 @@ def repeat(req):
         # elaboration連結回故事ID 並存入故事中的句子作為機器人語料庫
         sentence_id = now_index[0]
         exist_elaboration = myVerbList.find_one(
-            {'Sentence_id': sentence_id, "Student_elaboration": {'$exists': True}})
+            {'Sentence_id': sentence_id, "Student_Elaboration": {'$exists': True}})
         if exist_elaboration is not None:
-            student_elaboration = myVerbList.find_one({'Sentence_id': sentence_id})['Student_elaboration']
-            student_elaboration.append(now_user_say)
+            student_elaboration = myVerbList.find_one({'Sentence_id': sentence_id})['Student_Elaboration']
+            if now_user_say not in student_elaboration:
+                student_elaboration.append(now_user_say)
         else:
-            student_elaboration = []
-        newvalues = {"$set": {'Student_elaboration': student_elaboration}}
+            student_elaboration = [now_user_say]
+        newvalues = {"$set": {'Student_Elaboration': student_elaboration}}
         myVerbList.update_one({'Sentence_id': sentence_id}, newvalues)
 
     if double_check:
@@ -714,15 +767,25 @@ def repeat(req):
 # 接續使用者的下一句
 def retrive(req):
     print("RETRIVE")
-    global now_index, dialog_id, state, match_sentence
+    global now_index, dialog_id
     go_expand = False
-    match_sentence += 1
+    input_sentence = req['session']['params']['User_inputCount']
+    user_id = req['session']['params']['User_id']
+    record_list = req['session']['params']['User_record_list']
+    noMatch_count = req['session']['params']['User_noMatch']
+    match_entity = req['session']['params']['User_matchEntity']
+    match_verb = req['session']['params']['User_matchVerb']
+    userSay = req['session']['params']['User_say']
+    bookName = req['session']['params']['User_book']
+    nowBook = myClient[bookName.replace(' ', '_')]
+    myVerbList = nowBook['VerbTable']
     time = req['user']['lastSeenTime']
     session_id = req['session']['id']
+    response = ''
     connect()
     all_cursor = myVerbList.find()
     print(record_list)
-    if match_sentence > (all_cursor.count()/2):
+    if input_sentence > (all_cursor.count() / 2):
         # 講到的句數超過一半
         go_expand = True
     else:
@@ -732,7 +795,7 @@ def retrive(req):
                 # 沒有任何故事就直接講第一句
                 find_common = {'type': 'common_return'}
                 find_common_result = myCommonList.find_one(find_common)
-                result = all_cursor[0]["Sentence_translate"]
+                result = all_cursor[0]["Sentence_translated"]
                 for word in ['。', '，', '！', '“', '”', '：']:
                     result = result.replace(word, ' ')
                 response = choice(find_common_result['content']) + ' ' + result
@@ -742,7 +805,7 @@ def retrive(req):
                 find_condition = {'Sentence_id': record_list[-1]}
                 find_result_cursor = myVerbList.find_one(find_condition)
                 story_conj = '故事裡還有提到'
-                result = find_result_cursor["Sentence_translate"]
+                result = find_result_cursor["Sentence_translated"]
                 for word in ['。', '，', '！', '“', '”', '：']:
                     result = result.replace(word, ' ')
                 response = story_conj + ' ' + result
@@ -757,8 +820,8 @@ def retrive(req):
             result_follow = myCommonList.find_one(find_common_follow)
             find_common_conj = {'type': 'common_conj'}
             result_conj = myCommonList.find_one(find_common_conj)
-            story_conj = choice(result_conj['content'])+choice(result_follow['content'])
-            result = find_result_next["Sentence_translate"]
+            story_conj = choice(result_conj['content']) + choice(result_follow['content'])
+            result = find_result_next["Sentence_translated"]
             for word in ['。', '，', '！', '“', '”', '：']:
                 result = result.replace(word, ' ')
             response = story_conj + ' ' + result
@@ -766,21 +829,17 @@ def retrive(req):
                 record_list.append(now_index[0] + 1)
 
     if go_expand:
-        state = True
-        find_common = {'type': 'common_expand'}
-        find_common_result = myCommonList.find_one(find_common)
-        response = "\n"+choice(find_common_result['content'])
-        createLibrary.updateUser(user_id, bookName, match_sentence, record_list, match_entity, match_verb, state)
-        response_dict = {"prompt": {
-            "firstSimple": {
-                "speech": response,
-                "text": response
-            }},
+        createLibrary.updateUser(user_id, bookName, input_sentence, record_list, match_entity, match_verb, state)
+        response_dict = {
             "scene": {
                 "next": {
                     'name': 'Expand'
                 }
-            }
+            },
+            "session": {
+                "params": dict(User_say=userSay, User_id=user_id, User_book=bookName,
+                               User_record_list=record_list, User_matchEntity=match_entity, User_matchVerb=match_verb,
+                               User_inputCount=input_sentence, User_noMatch=noMatch_count)}
         }
     else:
         find_common = {'type': 'common_repeat'}
@@ -795,7 +854,11 @@ def retrive(req):
                 "next": {
                     'name': 'Prompt'
                 }
-            }
+            },
+            "session": {
+                "params": dict(User_say=userSay, User_id=user_id, User_book=bookName,
+                               User_record_list=record_list, User_matchEntity=match_entity, User_matchVerb=match_verb,
+                               User_noMatch=noMatch_count)}
         }
 
     # 記錄對話過程
@@ -803,7 +866,7 @@ def retrive(req):
     dialog_id += 1
 
     print(response)
-    createLibrary.updateUser(user_id, bookName, match_sentence, record_list, match_entity, match_verb, state)
+    createLibrary.updateUser(user_id, bookName, input_sentence, record_list, match_entity, match_verb, state)
     return response_dict
 
 
@@ -811,8 +874,17 @@ def retrive(req):
 def inquire(req):
     print('Inquire')
     global dialog_id, double_check
+    input_sentence = req['session']['params']['User_inputCount']
+    user_id = req['session']['params']['User_id']
+    record_list = req['session']['params']['User_record_list']
+    noMatch_count = req['session']['params']['User_noMatch']
+    match_entity = req['session']['params']['User_matchEntity']
+    match_verb = req['session']['params']['User_matchVerb']
+    userSay = req['session']['params']['User_say']
+    bookName = req['session']['params']['User_book']
     time = req['user']['lastSeenTime']
     session_id = req['session']['id']
+    nowBook = myClient[bookName.replace(' ', '_')]
     myElaboration = nowBook['Elaboration']
     find_result = {'QA_id': qa_id}
     result = myElaboration.find_one(find_result)
@@ -830,7 +902,7 @@ def inquire(req):
         record_list.append(result['Sentence_id'])
         now_index.append(result['Sentence_id'])
 
-    createLibrary.updateUser(user_id, bookName, match_sentence, record_list, match_entity, match_verb, state)
+    createLibrary.updateUser(user_id, bookName, input_sentence, record_list, match_entity, match_verb, state)
     # 記錄對話過程
     createLibrary.addDialog(bookName, session_id, dialog_id, 'chatbot', response, time)
     dialog_id += 1
@@ -844,7 +916,11 @@ def inquire(req):
             "next": {
                 'name': 'PROMPT'
             }
-        }
+        },
+        "session": {
+            "params": dict(User_say=userSay, User_id=user_id, User_book=bookName,
+                           User_record_list=record_list, User_matchEntity=match_entity, User_matchVerb=match_verb,
+                           User_inputCount=input_sentence, User_noMatch=noMatch_count)}
     }
     print(response)
     return response_dict
@@ -922,9 +998,17 @@ def addElaboration(req):
     print('Elaboration')
     global dialog_id, double_check, qa_id
     double_check = False
+    user_id = req['session']['params']['User_id']
     userSay = req['intent']['query']
+    bookName = req['session']['params']['User_book']
     time = req['user']['lastSeenTime']
     session_id = req['session']['id']
+    noMatch_count = req['session']['params']['User_noMatch']
+    input_sentence = req['session']['params']['User_inputCount']
+    record_list = req['session']['params']['User_record_list']
+    match_entity = req['session']['params']['User_matchEntity']
+    match_verb = req['session']['params']['User_matchVerb']
+    response = ''
 
     # 暫定信心值
     confidence = 0
@@ -935,27 +1019,42 @@ def addElaboration(req):
     createLibrary.addDialog(bookName, session_id, dialog_id, 'Student ' + user_id, userSay, time)
     dialog_id += 1
 
-    find_common = {'type': 'common_match_T'}
-    find_common_result = myCommonList.find_one(find_common)
-    find_common_2 = {'type': 'common_repeat'}
-    find_common_result_2 = myCommonList.find_one(find_common_2)
-    response = choice(find_common_result['content']) + " " + userSay + "，" + choice(find_common_result_2['content'])
+    if noMatch_count == 3:
+        noMatch_count = 0
+        response_dict = {
+            "scene": {
+                "next": {
+                    'name': 'RETRIVE'
+                }
+            },
+            "session": {
+                "params": dict(User_say=userSay, User_id=user_id, User_book=bookName,
+                               User_record_list=record_list, User_matchEntity=match_entity, User_matchVerb=match_verb,
+                               User_inputCount=input_sentence, User_noMatch=noMatch_count)}
+        }
+    else:
+        find_common = {'type': 'common_elaboration'}
+        find_common_result = myCommonList.find_one(find_common)
+        response = choice(find_common_result['content']) + " " + userSay
+
+        find_common_2 = {'type': 'common_repeat'}
+        find_common_result_2 = myCommonList.find_one(find_common_2)
+        response = response + " " + choice(find_common_result_2['content'])
+        response_dict = {"prompt": {
+            "firstSimple": {
+                "speech": response,
+                "text": response
+            }},
+            "scene": {
+                "next": {
+                    'name': 'PROMPT'
+                }
+            }
+        }
 
     # 記錄對話過程
     createLibrary.addDialog(bookName, session_id, dialog_id, 'chatbot', response, time)
     dialog_id += 1
-
-    response_dict = {"prompt": {
-        "firstSimple": {
-            "speech": response,
-            "text": response
-        }},
-        "scene": {
-            "next": {
-                'name': 'PROMPT'
-            }
-        }
-    }
 
     qa_id += 1
     print(response)
@@ -965,14 +1064,18 @@ def addElaboration(req):
 # 學生心得回饋
 def expand(req, senta):
     print("Expand")
-    global dialog_id, expand_user, suggest_like
+    global dialog_id, expand_user, suggest_like, state
+    state = True
+    bookName = req['session']['params']['User_book']
     userSay = req['intent']['query']
     time = req['user']['lastSeenTime']
     session_id = req['session']['id']
     if not expand_user:
+        find_common_expand = {'type': 'common_expand'}
+        common_result_expand = myCommonList.find_one(find_common_expand)
         find_common = {'type': 'common_like'}
         find_result = myCommonList.find_one(find_common)
-        response = choice(find_result['content'])
+        response = "\n" + choice(common_result_expand['content']) + ' ' + choice(find_result['content'])
         expand_user = True
         response_dict = {"prompt": {
             "firstSimple": {
@@ -990,7 +1093,7 @@ def expand(req, senta):
             find_common2 = {'type': 'common_like_expand'}
             find_result = myCommonList.find_one(find_common)
             find_result2 = myCommonList.find_one(find_common2)
-            response = choice(find_result['content'])+' '+choice(find_result2['content'])
+            response = choice(find_result['content']) + ' ' + choice(find_result2['content'])
             suggest_like = True
         else:
             find_common = {'type': 'common_like_F_expand'}
@@ -1022,8 +1125,11 @@ def feedback(req):
     print('Feedback')
     global dialog_id
     userSay = req['intent']['query']
+    user_id = req['session']['params']['User_id']
+    bookName = req['session']['params']['User_book']
     time = req['user']['lastSeenTime']
     session_id = req['session']['id']
+    nowBook = myClient[bookName.replace(' ', '_')]
     myFeedback = nowBook['Feedback']
     # 記錄對話過程
     createLibrary.addDialog(bookName, session_id, dialog_id, 'Student ' + user_id, userSay, time)
@@ -1034,15 +1140,19 @@ def feedback(req):
     result_feedback_student = myCommonList.find_one(find_feedback_student)
     find_like = {'Sentiment': suggest_like}
     result_like = myFeedback.find(find_like)
-    if result_like.count() > 2:
-        choose_number = random.sample(range(0, result_like.count()-1), 2)
-        response = choice(find_result['content'])+" "+result_like[choose_number[0]]['Content']+"，"+choice(result_feedback_student['content'])+" "+result_like[choose_number[1]]['Content']
-    elif result_like.count() == 2:
-        response = choice(find_result['content']) + " " + result_like[0]['Content'] + "，" + choice(
-            result_feedback_student['content']) + " " + result_like[1]['Content']
+    if result_like.count() == 0:
+        response = '哦！謝謝你跟我分享！'
     else:
-        choose_number = 0
-        response = choice(find_result['content'])+" "+result_like[choose_number]['Content']
+        if result_like.count() > 2:
+            choose_number = random.sample(range(0, result_like.count() - 1), 2)
+            response = choice(find_result['content']) + " " + result_like[choose_number[0]]['Content'] + "，" + choice(
+                result_feedback_student['content']) + " " + result_like[choose_number[1]]['Content']
+        elif result_like.count() == 2:
+            response = choice(find_result['content']) + " " + result_like[0]['Content'] + "，" + choice(
+                result_feedback_student['content']) + " " + result_like[1]['Content']
+        else:
+            choose_number = 0
+            response = choice(find_result['content']) + " " + result_like[choose_number]['Content']
     response += '\n'
     response_dict = {"prompt": {
         "firstSimple": {
@@ -1068,6 +1178,7 @@ def suggestion(req):
     print("Suggestion")
     global dialog_id, suggest_like
     connect()
+    bookName = req['session']['params']['User_book']
     time = req['user']['lastSeenTime']
     session_id = req['session']['id']
     suggest_book = {}
@@ -1119,12 +1230,15 @@ def suggestion(req):
     return response_dict
 
 
-def exit_system():
+def exit_system(req):
     print("Exit")
-    if user_id != '' and bookName != '':
-        createLibrary.updateUser(user_id, bookName, match_sentence, record_list, match_entity, match_verb, state)
+    if 'User_id' in req['session']['params'].keys() and 'User_book' in req['session']['params'].keys():
+        createLibrary.updateUser(req['session']['params']['User_id'], req['session']['params']['User_book'],
+                                 req['session']['params']['User_inputCount'],
+                                 req['session']['params']['User_record_list'],
+                                 req['session']['params']['User_matchEntity'],
+                                 req['session']['params']['User_matchVerb'], state)
 
 
 if __name__ == '__main__':
     print(0)
-
