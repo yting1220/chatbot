@@ -60,8 +60,8 @@ def addBookInfo(bookName, c1, verb, c2, sentence, sentence_Translate, sentenceID
     myBook = myClient[bookName.replace(' ', '_')]
     myVerbList = myBook.VerbTable
 
-    mydict = {'Sentence_id': sentenceID, 'C1': c1, 'VERB': verb, 'C2': c2, 'Sentence': sentence,
-              'Sentence_translated': sentence_Translate, 'Speaker': speaker, 'Speak_to': speak_to}
+    mydict = {'Sentence_Id': sentenceID, 'C1': c1, 'Verb': verb, 'C2': c2, 'Sentence': sentence,
+              'Sentence_translate': sentence_Translate, 'Speaker': speaker, 'Speak_to': speak_to}
     myVerbList.insert_one(mydict)
     print(mydict)
 
@@ -72,18 +72,18 @@ def addBookKeyword(bookName, entityList, verbList):
     myBook = myClient[bookName.replace(' ', '_')]
     myKeyList = myBook.KeywordTable
 
-    mydict = {'Entity_List': entityList, 'Verb_List': verbList}
+    mydict = {'Entity_list': entityList, 'Verb_list': verbList}
     myKeyList.insert_one(mydict)
     print(mydict)
 
 
-def updateUser(userId, bookName, match_sentence, record_list, match_entity, match_verb, state):
+def updateUser(userId, bookName, match_sentence, record_list, match_entity, match_verb, state, noMatch_count):
     # 連接mongo
 
     myClient = pymongo.MongoClient("mongodb://root:ltlab35316@140.115.53.196:27017/")
     myBotData = myClient.Chatbot
     myUserList = myBotData.UserTable
-    bookTalkSummary = {'Match_sentence': match_sentence, 'Sentence_id_list': record_list, 'Entity_list': match_entity,
+    bookTalkSummary = {'Match_sentence': match_sentence, 'noMatch_count': noMatch_count, 'Sentence_id_list': record_list, 'Entity_list': match_entity,
                        'Verb_list': match_verb, 'Finish': state}
 
     if not list(myUserList.find()):
@@ -130,7 +130,7 @@ def addQuestion(bookName, qa_id, dialog_id, response):
     myBook = myClient[bookName.replace(' ', '_')]
     QATable = myBook.QATable
 
-    mydict = {'QA_id': qa_id, 'Dialog_id': dialog_id, 'Response': response}
+    mydict = {'QA_Id': qa_id, 'Dialog_id': dialog_id, 'Response': response}
     QATable.insert_one(mydict)
     print(mydict)
 
@@ -140,7 +140,10 @@ def addElaboration(bookName, qa_id, elaboration, confidence, sentence_id):
     myBook = myClient[bookName.replace(' ', '_')]
     Elaboration_Table = myBook.Elaboration
 
-    mydict = {'QA_id': qa_id, 'Elaboration': elaboration, 'Confidence': confidence, 'Sentence_id': sentence_id}
+    if sentence_id == '':
+        mydict = {'QA_Id': qa_id, 'Elaboration': elaboration, 'Confidence': confidence}
+    else:
+        mydict = {'QA_Id': qa_id, 'Elaboration': elaboration, 'Confidence': confidence, 'Sentence_Id': sentence_id}
     Elaboration_Table.insert_one(mydict)
     print(mydict)
 
@@ -149,7 +152,7 @@ def addFeedback(userId, bookName, sentiment, feedback):
     myClient = pymongo.MongoClient("mongodb://root:ltlab35316@140.115.53.196:27017/")
     myBook = myClient[bookName.replace(' ', '_')]
     Feedback_Table = myBook.Feedback
-    mydict = {'UserId': userId, 'Sentiment': sentiment, 'Content': feedback}
+    mydict = {'User_id': userId, 'Sentiment': sentiment, 'Content': feedback}
     Feedback_Table.insert_one(mydict)
     print(mydict)
 
