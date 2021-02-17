@@ -53,38 +53,14 @@ def addCommon():
             print(common_dict)
 
 
-# 新增故事書SVO data
-def addBookInfo(bookName, c1, verb, c2, sentence, sentence_Translate, sentenceID, speaker, speak_to):
-    # 連接mongo
-    myClient = pymongo.MongoClient("mongodb://root:ltlab35316@140.115.53.196:27017/")
-    myBook = myClient[bookName.replace(' ', '_')]
-    myVerbList = myBook.VerbTable
-
-    mydict = {'Sentence_Id': sentenceID, 'C1': c1, 'Verb': verb, 'C2': c2, 'Sentence': sentence,
-              'Sentence_translate': sentence_Translate, 'Speaker': speaker, 'Speak_to': speak_to}
-    myVerbList.insert_one(mydict)
-    print(mydict)
-
-
-def addBookKeyword(bookName, entityList, verbList):
-    # 連接mongo
-    myClient = pymongo.MongoClient("mongodb://root:ltlab35316@140.115.53.196:27017/")
-    myBook = myClient[bookName.replace(' ', '_')]
-    myKeyList = myBook.KeywordTable
-
-    mydict = {'Entity_list': entityList, 'Verb_list': verbList}
-    myKeyList.insert_one(mydict)
-    print(mydict)
-
-
-def updateUser(userId, bookName, match_sentence, record_list, match_entity, match_verb, state, noMatch_count):
+def updateUser(userId, bookName, match_sentence, record_list, match_entity, match_verb, state, noMatch_count, ifContinue):
     # 連接mongo
 
     myClient = pymongo.MongoClient("mongodb://root:ltlab35316@140.115.53.196:27017/")
     myBotData = myClient.Chatbot
     myUserList = myBotData.UserTable
     bookTalkSummary = {'Match_sentence': match_sentence, 'noMatch_count': noMatch_count, 'Sentence_id_list': record_list, 'Entity_list': match_entity,
-                       'Verb_list': match_verb, 'Finish': state}
+                       'Verb_list': match_verb, 'Finish': state, 'Continue': ifContinue}
 
     if not list(myUserList.find()):
         # 資料庫無資料 > 直接新增一筆

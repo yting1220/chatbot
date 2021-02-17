@@ -1,11 +1,12 @@
 # 建立故事內容及關鍵字資料庫
+import pymongo
 from allennlp.predictors.predictor import Predictor
 import copy
 from nltk.stem import WordNetLemmatizer
 from googletrans import Translator
 import createLibrary
 
-story_name = "Hansel and Gretel"
+story_name = " "
 content_list = []
 words = []
 entityInfo = {}
@@ -62,7 +63,7 @@ def coReference():
         # 計算出現次數最高者
         # if count > tempMax:
         #     tempMax = count
-            # tempProtagonist = temp_name
+        # tempProtagonist = temp_name
 
         entityInfo[temp_name] = {"Frequence": count}
         # print("出現次數：" + str(count), end='\r\n\r\n')
@@ -70,11 +71,14 @@ def coReference():
 
 
 def story_analysis():
+    myClient = pymongo.MongoClient("mongodb://root:ltlab35316@140.115.53.196:27017/")
+    myBook = myClient[story_name.replace(' ', '_')]
+    myVerbList = myBook.VerbTable
+    myKeyList = myBook.KeywordTable
     coReference()
     wnl = WordNetLemmatizer()
     verbName = []
     verbInfo = {}
-
     storyPhraseList = words.split('\n')
 
     story_2 = ' '.join(content_list)
@@ -82,20 +86,39 @@ def story_analysis():
     story_2 = story_2.replace(' . ', ' . \r\n')
     if story_name == "Fairy friends":
         story_2 = story_2.replace('mouse ! mouse', 'mouse.\r\nmouse').replace('elf ! Patch', 'elf.\r\nPatch').replace(
-            'Patch . \r\nGo away', 'Patch . Go away').replace('elf ! " Lily', 'elf ! " \r\nLily').replace('too ! " fairy', 'too !\r\n" fairy')
+            'Patch . \r\nGo away', 'Patch . Go away').replace('elf ! " Lily', 'elf ! " \r\nLily').replace(
+            'too ! " fairy', 'too !\r\n" fairy')
     if story_name == "Sleeping Beauty":
         story_2 = story_2.replace('die . \r\nbaby', 'die . baby').replace('years . \r\n"', 'years . " \r\n')
     if story_name == "The Tale of Jemima Puddle-Duck":
-        story_2 = story_2.replace('safe . \r\n" ', 'safe . "\r\n').replace('nest . \r\nJemima', 'nest . Jemima').replace('dinner . \r\n" ', 'dinner . "\r\n').replace('shed . \r\n" ', 'shed . "\r\n')
+        story_2 = story_2.replace('safe . \r\n" ', 'safe . "\r\n').replace('nest . \r\nJemima',
+                                                                           'nest . Jemima').replace('dinner . \r\n" ',
+                                                                                                    'dinner . "\r\n').replace(
+            'shed . \r\n" ', 'shed . "\r\n')
     if story_name == "Puss in Boots":
-        story_2 = story_2.replace('partridges . \r\n" ', 'partridges . "\r\n').replace('river . \r\n" ', 'river . "\r\n').replace('taken . \r\n" ', 'taken . "\r\n').replace('home . \r\n" ', 'home . "\r\n').replace('men master . \r\n" ', 'men master . "\r\n')\
-            .replace('? " ', '? "\r\n').replace('mouse . \r\n" ', 'mouse . "\r\n').replace('gifts . \r\nHow', 'gifts . How').replace('? "\r\nsaid', '? " said').replace('bag . \r\n" ', 'bag . "\r\n')
+        story_2 = story_2.replace('partridges . \r\n" ', 'partridges . "\r\n').replace('river . \r\n" ',
+                                                                                       'river . "\r\n').replace(
+            'taken . \r\n" ', 'taken . "\r\n').replace('home . \r\n" ', 'home . "\r\n').replace('men master . \r\n" ',
+                                                                                                'men master . "\r\n') \
+            .replace('? " ', '? "\r\n').replace('mouse . \r\n" ', 'mouse . "\r\n').replace('gifts . \r\nHow',
+                                                                                           'gifts . How').replace(
+            '? "\r\nsaid', '? " said').replace('bag . \r\n" ', 'bag . "\r\n')
     if story_name == "Little Red Riding Hood":
-        story_2 = story_2.replace(' " " ', ' "\r\n" ').replace('up ! " ', 'up ! "\r\n').replace('closer . \r\n" ', 'closer . "\r\n')
+        story_2 = story_2.replace(' " " ', ' "\r\n" ').replace('up ! " ', 'up ! "\r\n').replace('closer . \r\n" ',
+                                                                                                'closer . "\r\n')
     if story_name == "The Magic Paintbrush":
-        story_2 = story_2.replace('wood . \r\nSui', 'wood . Sui').replace('bedroom ! ', 'bedroom ! \r\n').replace('face ! ', 'face ! \r\n').replace('magic ! ', 'magic ! \r\n').replace('people . \r\n" ', 'people . "\r\n').replace('snakes ! ', 'snakes ! \r\n').replace('go ! " ', 'go ! "\r\n').replace('money . \r\n" ', 'money . "\r\n').replace('Ming . \r\n" In', 'money . "\r\nIn')
+        story_2 = story_2.replace('wood . \r\nSui', 'wood . Sui').replace('bedroom ! ', 'bedroom ! \r\n').replace(
+            'face ! ', 'face ! \r\n').replace('magic ! ', 'magic ! \r\n').replace('people . \r\n" ',
+                                                                                  'people . "\r\n').replace('snakes ! ',
+                                                                                                            'snakes ! \r\n').replace(
+            'go ! " ', 'go ! "\r\n').replace('money . \r\n" ', 'money . "\r\n').replace('Ming . \r\n" In',
+                                                                                        'money . "\r\nIn')
     if story_name == "Hansel and Gretel":
-        story_2 = story_2.replace('eat . \r\n" ', 'eat . "\r\n').replace('wood . \r\n" ', 'wood . "\r\n').replace('must . \r\n" ', 'must . "\r\n').replace('take . \r\n" ', 'take . "\r\n').replace('home . \r\n" ', 'home . "\r\n').replace('fire . \r\n" ', 'fire . "\r\n').replace('money . \r\n" ', 'money . "\r\n').replace('left . \r\n', 'left . ')
+        story_2 = story_2.replace('eat . \r\n" ', 'eat . "\r\n').replace('wood . \r\n" ', 'wood . "\r\n').replace(
+            'must . \r\n" ', 'must . "\r\n').replace('take . \r\n" ', 'take . "\r\n').replace('home . \r\n" ',
+                                                                                              'home . "\r\n').replace(
+            'fire . \r\n" ', 'fire . "\r\n').replace('money . \r\n" ', 'money . "\r\n').replace('left . \r\n',
+                                                                                                'left . ')
     story_2_PhraseList = story_2.split('\r\n')
     for i in story_2_PhraseList:
         print(i)
@@ -120,12 +143,14 @@ def story_analysis():
         )
         print(sentence)
         # 抓出主要SVO
+        svo = {}
         for j in range(len(result['pos'])):
             if v == False and (result['pos'][j] == 'PROPN' or result['pos'][j] == 'NOUN'):
                 if result['words'][j] not in c1_list:
                     c1_list.append(result['words'][j])
                 continue
-            if (result['pos'][j] == 'VERB' and result['predicted_dependencies'][j] != 'aux') or (result['pos'][j] == 'AUX' and result['predicted_dependencies'][j] == 'root'):
+            if (result['pos'][j] == 'VERB' and result['predicted_dependencies'][j] != 'aux') or (
+                    result['pos'][j] == 'AUX' and result['predicted_dependencies'][j] == 'root'):
                 if result['words'][j].lower() != 'can':
                     v = True
                     if result['words'][j] not in v_list:
@@ -139,6 +164,12 @@ def story_analysis():
                     c2_list.append(result['words'][j])
                 continue
         print('S:' + str(c1_list) + ' V:' + str(v_list) + ' O:' + str(c2_list))
+        if len(c1_list) != 0:
+            svo['C1'] = c1_list
+        if len(v_list) != 0:
+            svo['Verb'] = v_list
+        if len(c2_list) != 0:
+            svo['C2'] = c2_list
 
         speaker = ''
         speak_to = ''
@@ -167,8 +198,9 @@ def story_analysis():
                                     # "" XXX say
                                     speaker = ' '.join(temp[0:d_index])
                                     # 改寫原句 將對話句子的說話者代名詞改為角色名稱
-                                    temp_phrase = storyPhraseList[i].split('" ')[1].split(' '+temp[d_index])[0]
-                                    storyPhraseList[i] = storyPhraseList[i].replace(" " + temp_phrase + " ", " " + speaker+' ')
+                                    temp_phrase = storyPhraseList[i].split('" ')[1].split(' ' + temp[d_index])[0]
+                                    storyPhraseList[i] = storyPhraseList[i].replace(" " + temp_phrase + " ",
+                                                                                    " " + speaker + ' ')
                                     print(storyPhraseList[i])
                                 break
                         if match:
@@ -187,8 +219,9 @@ def story_analysis():
                             match = True
                             speaker = ' '.join(temp[0:d_index])
                             # 改寫原句 將對話句子的說話者代名詞改為角色名稱
-                            temp_phrase = storyPhraseList[i].split(' "')[0].split(' '+temp[d_index])[0]
-                            storyPhraseList[i] = storyPhraseList[i].replace(" " + temp_phrase + " ", " " + speaker+' ')
+                            temp_phrase = storyPhraseList[i].split(' "')[0].split(' ' + temp[d_index])[0]
+                            storyPhraseList[i] = storyPhraseList[i].replace(" " + temp_phrase + " ",
+                                                                            " " + speaker + ' ')
                             print(storyPhraseList[i])
                             break
                     if match:
@@ -226,11 +259,19 @@ def story_analysis():
             temp = sentence_Translate.split('”')
             temp.reverse()
             sentence_Translate = ''.join(temp)
-        createLibrary.addBookInfo(story_name, c1_list, v_list, c2_list, story_2_PhraseList[i], sentence_Translate, i, speaker, speak_to)
+
+        sentence_info = {'Sentence_Id': i, 'Sentence': story_2_PhraseList[i],
+                         'Sentence_translate': sentence_Translate, 'Speaker': speaker, 'Speak_to': speak_to}
+        mydict = svo.copy()
+        mydict.update(sentence_info)
+        myVerbList.insert_one(mydict)
+        print(mydict)
 
     for index in verbName:
         verbInfo[index] = {"Frequence": verbName.count(index)}
-    createLibrary.addBookKeyword(story_name, entityInfo, verbInfo)
+    myKeyDict = {'Entity_list': entityInfo, 'Verb_list': verbInfo}
+    myKeyList.insert_one(myKeyDict)
+    print(myKeyDict)
 
 
 if __name__ == "__main__":
