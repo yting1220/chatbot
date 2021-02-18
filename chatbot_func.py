@@ -97,6 +97,7 @@ def check_book(req):
     second_check = True
     userSay = req['intent']['query']
     user_id = req['session']['params']['User_id']
+    input_sentence = 0
     connect()
     if 'User_second_match' in req['session']['params'].keys():
         second_match = req['session']['params']['User_second_match']
@@ -111,7 +112,8 @@ def check_book(req):
             "session": {
                 "params": {
                     'User_second_check': second_check,
-                    'User_second_match': second_match
+                    'User_second_match': second_match,
+                    'User_inputCount': input_sentence
                 }
             }}
     else:
@@ -136,7 +138,8 @@ def check_book(req):
                             'User_book': find_result_cursor[0]['bookName'],
                             'User_bookMatch': book_match,
                             'User_second_check': second_check,
-                            'User_second_match': second_match
+                            'User_second_match': second_match,
+                            'User_inputCount': input_sentence
                         }
                     }
                 }
@@ -157,7 +160,8 @@ def check_book(req):
                     }},
                     "session": {
                         "params": {
-                            'User_second_match': second_match
+                            'User_second_match': second_match,
+                            'User_inputCount': input_sentence
                         }
                     }
                 }
@@ -173,7 +177,8 @@ def check_book(req):
                     "params": {
                         'User_bookMatch': book_match,
                         'User_second_check': second_check,
-                        'User_second_match': second_match
+                        'User_second_match': second_match,
+                        'User_inputCount': input_sentence
                     }
                 }}
     return response_dict
@@ -350,6 +355,10 @@ def prompt(req):
     myDialogList = nowBook['S_R_Dialog']
     dialog_index = myDialogList.find().count()
     dialog_id = myDialogList.find()[dialog_index - 1]['Dialog_id'] + 1
+    if 'UserSay_final' in req['session']['params'].keys():
+        userSay_final = req['session']['params']['UserSay_final']
+    else:
+        userSay_final = []
     # 曾經有紀錄
     if recorded:
         find_common = {'type': 'common_repeat'}
@@ -372,13 +381,15 @@ def prompt(req):
         "firstSimple": {
             "speech": response,
             "text": response
-        }
+        },
+        'suggestions': [{'title': '完成'},
+                        {'title': '清除'}]
     },
         "session": {
             "params": dict(User_say=userSay, User_id=user_id, User_book=bookName, User_record_list=record_list,
                            User_matchEntity=match_entity, User_matchVerb=match_verb, User_inputCount=input_sentence,
                            User_noMatch=noMatch_count, User_First_bool=firstTime, User_doubleCheck=double_check,
-                           User_recorded=recorded, User_ifContinue=ifContinue)}
+                           User_recorded=recorded, User_ifContinue=ifContinue, UserSay_final=userSay_final)}
     }
 
     print(response)
@@ -405,8 +416,15 @@ def evaluate(req, predictor):
     userSay = req['intent']['query']
     time = req['user']['lastSeenTime']
     session_id = req['session']['id']
-    if type(userSay) != str:
-        response = '我不太懂你說的耶! 你可以再說一次嗎'
+    goEvaluate = False
+    userSay_final = req['session']['params']['UserSay_final']
+    userSay_final.append(userSay)
+    print('紀錄說過的話：'+str(userSay_final))
+    if userSay == '清除':
+        userSay_final.remove(userSay)
+        if len(userSay_final) > 0:
+            userSay_final.pop()
+        response = '再重新跟我說一次吧'
         response_dict = {"prompt": {
             "firstSimple": {
                 "speech": response,
@@ -416,9 +434,59 @@ def evaluate(req, predictor):
                 "next": {
                     'name': 'Prompt'
                 }
-            }
+            },
+            "session": {
+                "params": dict(User_say=userSay, User_id=user_id, User_book=bookName, User_record_list=record_list,
+                               User_matchEntity=match_entity, User_matchVerb=match_verb, User_inputCount=input_sentence,
+                               User_noMatch=noMatch_count, User_First_bool=firstTime, User_doubleCheck=double_check,
+                               User_recorded=recorded, User_ifContinue=ifContinue, UserSay_final=userSay_final)}
         }
+    elif userSay == '完成':
+        userSay_final.pop()
+        if len(userSay_final) == 0:
+            response = '你還沒說呢！故事裡有甚麼呢？'
+            response_dict = {"prompt": {
+                "firstSimple": {
+                    "speech": response,
+                    "text": response
+                }},
+                "scene": {
+                    "next": {
+                        'name': 'Prompt'
+                    }
+                },
+                "session": {
+                    "params": dict(User_say=userSay, User_id=user_id, User_book=bookName, User_record_list=record_list,
+                                   User_matchEntity=match_entity, User_matchVerb=match_verb,
+                                   User_inputCount=input_sentence,
+                                   User_noMatch=noMatch_count, User_First_bool=firstTime, User_doubleCheck=double_check,
+                                   User_recorded=recorded, User_ifContinue=ifContinue, UserSay_final=userSay_final)}
+            }
+        else:
+            userSay = ''.join(userSay_final)
+            goEvaluate = True
+            # go evaluate
     else:
+        # go prompt
+        response = '然後呢'
+        response_dict = {"prompt": {
+            "firstSimple": {
+                "speech": response,
+                "text": response
+            }},
+            "scene": {
+                "next": {
+                    'name': 'Prompt'
+                }
+            },
+            "session": {
+                "params": dict(User_say=userSay, User_id=user_id, User_book=bookName, User_record_list=record_list,
+                               User_matchEntity=match_entity, User_matchVerb=match_verb, User_inputCount=input_sentence,
+                               User_noMatch=noMatch_count, User_First_bool=firstTime, User_doubleCheck=double_check,
+                               User_recorded=recorded, User_ifContinue=ifContinue, UserSay_final=userSay_final)}
+        }
+    if goEvaluate:
+        userSay_final = []
         nowBook = myClient[bookName.replace(' ', '_')]
         myDialogList = nowBook['S_R_Dialog']
         dialog_index = myDialogList.find().count()
@@ -694,7 +762,7 @@ def evaluate(req, predictor):
                                                        User_noMatch=noMatch_count, User_First_bool=firstTime,
                                                        User_doubleCheck=double_check, User_recorded=recorded,
                                                        User_nowInput=now_user_say, User_repeatContent=repeat_content,
-                                                       User_nowIndex=now_index, User_ifContinue=ifContinue)}
+                                                       User_nowIndex=now_index, User_ifContinue=ifContinue, UserSay_final=userSay_final)}
                                 }
                                 break
                             else:
@@ -751,7 +819,7 @@ def evaluate(req, predictor):
                                            User_noMatch=noMatch_count, User_First_bool=firstTime,
                                            User_doubleCheck=double_check, User_recorded=recorded,
                                            User_nowInput=now_user_say, User_repeatContent=repeat_content,
-                                           User_nowIndex=now_index, User_ifContinue=ifContinue)}
+                                           User_nowIndex=now_index, User_ifContinue=ifContinue, UserSay_final=userSay_final)}
                     }
                 else:
                     if double_check:
@@ -766,7 +834,7 @@ def evaluate(req, predictor):
                                                User_matchVerb=match_verb, User_inputCount=input_sentence,
                                                User_noMatch=noMatch_count, User_First_bool=firstTime,
                                                User_doubleCheck=double_check, User_recorded=recorded,
-                                               User_nowIndex=now_index, User_ifContinue=ifContinue)}
+                                               User_nowIndex=now_index, User_ifContinue=ifContinue, UserSay_final=userSay_final)}
                         }
                     else:
                         all_QA_cursor = myQATable.find()
@@ -795,7 +863,8 @@ def evaluate(req, predictor):
                                                            User_matchVerb=match_verb, User_inputCount=input_sentence,
                                                            User_noMatch=noMatch_count, User_First_bool=firstTime,
                                                            User_doubleCheck=double_check, User_recorded=recorded,
-                                                           User_qaId=qa_id, User_nowIndex=now_index, User_ifContinue=ifContinue)}
+                                                           User_qaId=qa_id, User_nowIndex=now_index,
+                                                           User_ifContinue=ifContinue, UserSay_final=userSay_final)}
                                     }
                                     break
                         if all_QA_cursor is None or not QAMatch:
@@ -832,7 +901,8 @@ def evaluate(req, predictor):
                                                    User_matchVerb=match_verb, User_inputCount=input_sentence,
                                                    User_noMatch=noMatch_count, User_First_bool=firstTime,
                                                    User_doubleCheck=double_check, User_recorded=recorded,
-                                                   User_nowInput=now_user_say, User_repeatContent=repeat_content, User_ifContinue=ifContinue)}
+                                                   User_nowInput=now_user_say, User_repeatContent=repeat_content,
+                                                   User_ifContinue=ifContinue, UserSay_final=userSay_final)}
                             }
 
     print(response)
@@ -843,6 +913,7 @@ def evaluate(req, predictor):
 def repeat(req):
     print("REPEAT")
     ifContinue = req['session']['params']['User_ifContinue']
+    userSay_final = req['session']['params']['UserSay_final']
     bookName = req['session']['params']['User_book']
     nowBook = myClient[bookName.replace(' ', '_')]
     myVerbList = nowBook['VerbTable']
@@ -911,7 +982,8 @@ def repeat(req):
             "params": dict(User_say=userSay, User_id=user_id, User_book=bookName,
                            User_record_list=record_list, User_matchEntity=match_entity, User_matchVerb=match_verb,
                            User_inputCount=input_sentence, User_noMatch=noMatch_count, User_First_bool=firstTime,
-                           User_doubleCheck=double_check, User_recorded=recorded, User_nowIndex=now_index, User_ifContinue=ifContinue)}
+                           User_doubleCheck=double_check, User_recorded=recorded, User_nowIndex=now_index,
+                           User_ifContinue=ifContinue, UserSay_final=userSay_final)}
     }
 
     print(response)
@@ -921,6 +993,7 @@ def repeat(req):
 # 接續使用者的下一句
 def retrive(req):
     print("RETRIVE")
+    userSay_final = req['session']['params']['UserSay_final']
     recorded = req['session']['params']['User_recorded']
     double_check = req['session']['params']['User_doubleCheck']
     firstTime = req['session']['params']['User_First_bool']
@@ -1018,7 +1091,7 @@ def retrive(req):
                 "params": dict(User_say=userSay, User_id=user_id, User_book=bookName,
                                User_record_list=record_list, User_matchEntity=match_entity, User_matchVerb=match_verb,
                                User_noMatch=noMatch_count, User_First_bool=firstTime, User_doubleCheck=double_check,
-                               User_recorded=recorded, User_ifContinue=ifContinue)}
+                               User_recorded=recorded, User_ifContinue=ifContinue, UserSay_final=userSay_final)}
         }
 
     # 記錄對話過程
@@ -1033,6 +1106,7 @@ def retrive(req):
 
 def askContinue(req):
     print('Continue or not')
+    userSay_final = req['session']['params']['UserSay_final']
     userSay = req['intent']['query']
     recorded = req['session']['params']['User_recorded']
     ifContinue = req['session']['params']['User_ifContinue']
@@ -1064,7 +1138,7 @@ def askContinue(req):
                 "params": dict(User_say=userSay, User_id=user_id, User_book=bookName,
                                User_record_list=record_list, User_matchEntity=match_entity, User_matchVerb=match_verb,
                                User_noMatch=noMatch_count, User_First_bool=firstTime, User_doubleCheck=double_check,
-                               User_recorded=recorded, User_ifContinue=ifContinue)}
+                               User_recorded=recorded, User_ifContinue=ifContinue, UserSay_final=userSay_final)}
         }
     else:
         response = '好唷！沒問題！'
@@ -1086,7 +1160,7 @@ def askContinue(req):
                 "params": dict(User_say=userSay, User_id=user_id, User_book=bookName,
                                User_record_list=record_list, User_matchEntity=match_entity, User_matchVerb=match_verb,
                                User_inputCount=input_sentence, User_noMatch=noMatch_count, User_First_bool=firstTime,
-                               User_doubleCheck=double_check, User_recorded=recorded, User_ifContinue=ifContinue)}
+                               User_doubleCheck=double_check, User_recorded=recorded, User_ifContinue=ifContinue, UserSay_final=userSay_final)}
         }
     print(response)
     return response_dict
@@ -1095,6 +1169,7 @@ def askContinue(req):
 # 確認比對到的QA
 def inquire(req):
     print('Inquire')
+    userSay_final = req['session']['params']['UserSay_final']
     recorded = req['session']['params']['User_recorded']
     ifContinue = req['session']['params']['User_ifContinue']
     double_check = req['session']['params']['User_doubleCheck']
@@ -1149,7 +1224,8 @@ def inquire(req):
             "params": dict(User_say=userSay, User_id=user_id, User_book=bookName,
                            User_record_list=record_list, User_matchEntity=match_entity, User_matchVerb=match_verb,
                            User_inputCount=input_sentence, User_noMatch=noMatch_count, User_First_bool=firstTime,
-                           User_doubleCheck=double_check, User_recorded=recorded, User_nowIndex=now_index, User_ifContinue=ifContinue)}
+                           User_doubleCheck=double_check, User_recorded=recorded, User_nowIndex=now_index,
+                           User_ifContinue=ifContinue, UserSay_final=userSay_final)}
     }
     print(response)
     return response_dict
@@ -1159,6 +1235,7 @@ def inquire(req):
 def addElaboration(req):
     print('Elaboration')
     double_check = False
+    userSay_final = req['session']['params']['UserSay_final']
     ifContinue = req['session']['params']['User_ifContinue']
     recorded = req['session']['params']['User_recorded']
     firstTime = req['session']['params']['User_First_bool']
@@ -1200,7 +1277,7 @@ def addElaboration(req):
                 "params": dict(User_say=userSay, User_id=user_id, User_book=bookName,
                                User_record_list=record_list, User_matchEntity=match_entity, User_matchVerb=match_verb,
                                User_inputCount=input_sentence, User_noMatch=noMatch_count, User_First_bool=firstTime,
-                               User_doubleCheck=double_check, User_recorded=recorded, User_ifContinue=ifContinue)}
+                               User_doubleCheck=double_check, User_recorded=recorded, User_ifContinue=ifContinue, UserSay_final=userSay_final)}
         }
     else:
         find_common = {'type': 'common_elaboration'}
@@ -1224,7 +1301,7 @@ def addElaboration(req):
                 "params": dict(User_say=userSay, User_id=user_id, User_book=bookName,
                                User_record_list=record_list, User_matchEntity=match_entity, User_matchVerb=match_verb,
                                User_inputCount=input_sentence, User_noMatch=noMatch_count, User_First_bool=firstTime,
-                               User_doubleCheck=double_check, User_recorded=recorded, User_ifContinue=ifContinue)}
+                               User_doubleCheck=double_check, User_recorded=recorded, User_ifContinue=ifContinue, UserSay_final=userSay_final)}
         }
 
     # 記錄對話過程
@@ -1284,19 +1361,23 @@ def expand(req, senta):
         # Senta情感分析
         input_dict = {"text": [userSay]}
         results = senta.sentiment_classify(data=input_dict)
-        if results[0]['sentiment_key'] == "positive" and results[0]['positive_probs'] >= 0.76:
-            # 接續詢問使用者喜歡故事的原因
-            find_common = {'type': 'common_like_response'}
-            find_common2 = {'type': 'common_like_expand'}
-            find_result = myCommonList.find_one(find_common)
-            find_result2 = myCommonList.find_one(find_common2)
-            response = choice(find_result['content']) + ' ' + choice(find_result2['content'])
-            suggest_like = True
-        else:
-            find_common = {'type': 'common_like_F_expand'}
-            find_result = myCommonList.find_one(find_common)
-            response = choice(find_result['content'])
+        if userSay == '還好' or userSay == '普通':
+            response = '這樣啊！那是為甚麼呢？'
             suggest_like = False
+        else:
+            if results[0]['sentiment_key'] == "positive" and results[0]['positive_probs'] >= 0.76:
+                # 接續詢問使用者喜歡故事的原因
+                find_common = {'type': 'common_like_response'}
+                find_common2 = {'type': 'common_like_expand'}
+                find_result = myCommonList.find_one(find_common)
+                find_result2 = myCommonList.find_one(find_common2)
+                response = choice(find_result['content']) + ' ' + choice(find_result2['content'])
+                suggest_like = True
+            else:
+                find_common = {'type': 'common_like_F_expand'}
+                find_result = myCommonList.find_one(find_common)
+                response = choice(find_result['content'])
+                suggest_like = False
         expand_user = False
         response_dict = {"prompt": {
             "firstSimple": {
@@ -1381,7 +1462,8 @@ def feedback(req):
             "params": dict(User_say=userSay, User_id=user_id, User_book=bookName,
                            User_record_list=record_list, User_matchEntity=match_entity, User_matchVerb=match_verb,
                            User_inputCount=input_sentence, User_noMatch=noMatch_count, User_First_bool=firstTime,
-                           User_doubleCheck=double_check, User_recorded=recorded, User_sentiment=suggest_like, User_ifContinue=ifContinue)}
+                           User_doubleCheck=double_check, User_recorded=recorded, User_sentiment=suggest_like,
+                           User_ifContinue=ifContinue)}
     }
     createLibrary.addFeedback(user_id, bookName, suggest_like, userSay)
     # 記錄對話過程
