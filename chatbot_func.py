@@ -309,6 +309,7 @@ def match_book(req):
         }
     else:
         second_match = False
+        second_check = True
         response_dict = {"prompt": {
             "firstSimple": {
                 "speech": response,
@@ -322,7 +323,8 @@ def match_book(req):
             },
             "session": {
                 "params": {
-                    'User_second_check': second_match
+                    'User_second_match': second_match,
+                    'User_second_check': second_check
                 }}
         }
 
@@ -603,9 +605,6 @@ def evaluate(req, predictor):
                         checkC2 = False
                         checkVerb = False
 
-                        # story_c1 = myVerbList.find_one({"Sentence_Id": similarity_index[0]})['C1']
-                        # story_v = myVerbList.find_one({"Sentence_Id": similarity_index[0]})['Verb']
-                        # story_c2 = myVerbList.find_one({"Sentence_Id": similarity_index[0]})['C2']
                         storyMatch_count = 0
                         story_c1 = myVerbList.find_one(
                             {'Sentence_Id': similarity_index[0], "C1": {'$exists': True}})
@@ -714,7 +713,7 @@ def evaluate(req, predictor):
                                             break
                                     if checkC2:
                                         break
-                            print('比對到的各數:' + str(matchColumn_count))
+
                             if matchColumn_count == 2:
                                 if similarity_index[0] not in twoColumn:
                                     twoColumn.append(similarity_index[0])
@@ -1545,6 +1544,3 @@ def exit_system(req):
                                  req['session']['params']['User_matchVerb'], req['session']['params']['User_state'],
                                  req['session']['params']['User_noMatch'], req['session']['params']['User_ifContinue'])
 
-
-if __name__ == '__main__':
-    print(0)
