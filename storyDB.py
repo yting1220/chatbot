@@ -5,8 +5,7 @@ import copy
 from nltk.stem import WordNetLemmatizer
 from googletrans import Translator
 import createLibrary
-
-story_name = " "
+story_name = ""
 content_list = []
 words = []
 entityInfo = {}
@@ -17,7 +16,7 @@ def createStory():
     path = "story/" + story_name + ".txt"
     f = open(path, mode='r')
     words = f.read()
-    story_content = words.replace('\n', ' ')
+    story_content = words.replace('*', '').replace('\n', ' ')
     createLibrary.addBook(story_name, story_content)
     f.close()
 
@@ -47,6 +46,18 @@ def coReference():
             temp_name = 'Patch'
         if story_name == 'Hansel and Gretel' and temp_name == 'I':
             temp_name = 'Hansel'
+        if story_name == 'Drop It, Rocket!' and temp_name == 'I':
+            temp_name = 'Owl'
+        if story_name == 'Rocket and the Perfect Pumpkin' and temp_name == 'you':
+            temp_name = 'Rocket'
+        if story_name == 'Rocket and the Perfect Pumpkin' and temp_name == 'me':
+            temp_name = 'Bella'
+        if story_name == 'Shopping' and temp_name == 'He':
+            temp_name = 'Chip'
+        if story_name == "TY'S TRAVELS ALL Aboard!" and temp_name == 'My':
+            temp_name = 'TY'
+        if story_name == "TY'S TRAVELS ALL Aboard!" and temp_name == 'We':
+            temp_name = 'TY, Daddy and Mom'
         for index in delchar:
             if temp_name[0:2] == index or temp_name[0:4] == index:
                 temp_name = temp_name.replace(index, "")
@@ -72,53 +83,19 @@ def coReference():
 
 def story_analysis():
     myClient = pymongo.MongoClient("mongodb://root:ltlab35316@140.115.53.196:27017/")
-    myBook = myClient[story_name.replace(' ', '_')]
+    myBook = myClient[story_name.replace(' ', '_').replace("'", "")]
     myVerbList = myBook.VerbTable
     myKeyList = myBook.KeywordTable
     coReference()
     wnl = WordNetLemmatizer()
     verbName = []
     verbInfo = {}
-    storyPhraseList = words.split('\n')
+    storyPhraseList = words.replace('*', '').split('\n')
 
     story_2 = ' '.join(content_list)
     print(story_2)
-    story_2 = story_2.replace(' . ', ' . \r\n')
-    if story_name == "Fairy friends":
-        story_2 = story_2.replace('mouse ! mouse', 'mouse.\r\nmouse').replace('elf ! Patch', 'elf.\r\nPatch').replace(
-            'Patch . \r\nGo away', 'Patch . Go away').replace('elf ! " Lily', 'elf ! " \r\nLily').replace(
-            'too ! " fairy', 'too !\r\n" fairy')
-    if story_name == "Sleeping Beauty":
-        story_2 = story_2.replace('die . \r\nbaby', 'die . baby').replace('years . \r\n"', 'years . " \r\n')
-    if story_name == "The Tale of Jemima Puddle-Duck":
-        story_2 = story_2.replace('safe . \r\n" ', 'safe . "\r\n').replace('nest . \r\nJemima',
-                                                                           'nest . Jemima').replace('dinner . \r\n" ',
-                                                                                                    'dinner . "\r\n').replace(
-            'shed . \r\n" ', 'shed . "\r\n')
-    if story_name == "Puss in Boots":
-        story_2 = story_2.replace('partridges . \r\n" ', 'partridges . "\r\n').replace('river . \r\n" ',
-                                                                                       'river . "\r\n').replace(
-            'taken . \r\n" ', 'taken . "\r\n').replace('home . \r\n" ', 'home . "\r\n').replace('men master . \r\n" ',
-                                                                                                'men master . "\r\n') \
-            .replace('? " ', '? "\r\n').replace('mouse . \r\n" ', 'mouse . "\r\n').replace('gifts . \r\nHow',
-                                                                                           'gifts . How').replace(
-            '? "\r\nsaid', '? " said').replace('bag . \r\n" ', 'bag . "\r\n')
-    if story_name == "Little Red Riding Hood":
-        story_2 = story_2.replace(' " " ', ' "\r\n" ').replace('up ! " ', 'up ! "\r\n').replace('closer . \r\n" ',
-                                                                                                'closer . "\r\n')
-    if story_name == "The Magic Paintbrush":
-        story_2 = story_2.replace('wood . \r\nSui', 'wood . Sui').replace('bedroom ! ', 'bedroom ! \r\n').replace(
-            'face ! ', 'face ! \r\n').replace('magic ! ', 'magic ! \r\n').replace('people . \r\n" ',
-                                                                                  'people . "\r\n').replace('snakes ! ',
-                                                                                                            'snakes ! \r\n').replace(
-            'go ! " ', 'go ! "\r\n').replace('money . \r\n" ', 'money . "\r\n').replace('Ming . \r\n" In',
-                                                                                        'money . "\r\nIn')
-    if story_name == "Hansel and Gretel":
-        story_2 = story_2.replace('eat . \r\n" ', 'eat . "\r\n').replace('wood . \r\n" ', 'wood . "\r\n').replace(
-            'must . \r\n" ', 'must . "\r\n').replace('take . \r\n" ', 'take . "\r\n').replace('home . \r\n" ',
-                                                                                              'home . "\r\n').replace(
-            'fire . \r\n" ', 'fire . "\r\n').replace('money . \r\n" ', 'money . "\r\n').replace('left . \r\n',
-                                                                                                'left . ')
+    # *符號表示換行
+    story_2 = story_2.replace(' * ', ' \r\n')
     story_2_PhraseList = story_2.split('\r\n')
     for i in story_2_PhraseList:
         print(i)
@@ -251,6 +228,18 @@ def story_analysis():
                         sentence_Translate = sentence_Translate.replace(word, '精靈')
                 if story_name == 'Hansel and Gretel':
                     sentence_Translate = sentence_Translate.replace('a夫', '樵夫')
+                if story_name == 'A Monster is Coming!':
+                    missing_Inchworm = ['九蟲', 'ch蟲', '尺ch']
+                    for word in missing_Inchworm:
+                        sentence_Translate = sentence_Translate.replace(word, '蟲')
+                    sentence_Translate = sentence_Translate.replace('Baby Bug', '寶貝蟲')
+                    sentence_Translate = sentence_Translate.replace('Bug', '蟲子')
+                if story_name == 'Drop It, Rocket!' or story_name == 'Rocket and the Perfect Pumpkin' or story_name == 'Rocket the Brave!' or story_name == "Rocket's 100th Day of School":
+                    sentence_Translate = sentence_Translate.replace('火箭', 'Rocket')
+                if story_name == 'Jack and Jill and T-Ball Bill':
+                    sentence_Translate = sentence_Translate.replace('賬單', '比爾')
+                if story_name == 'The chase':
+                    sentence_Translate = sentence_Translate.replace('軟盤', 'Floppy')
                 break
             except Exception as e:
                 print(e)
