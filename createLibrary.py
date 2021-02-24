@@ -92,7 +92,7 @@ def updateUser(userId, bookName, match_sentence, record_list, match_entity, matc
 
 def addDialog(bookName, session_id, dialog_id, speaker_id, content, time):
     myClient = pymongo.MongoClient("mongodb://root:ltlab35316@140.115.53.196:27017/")
-    myBook = myClient[bookName.replace(' ', '_')]
+    myBook = myClient[bookName.replace(' ', '_').replace("'", "")]
     allDialog = myBook.S_R_Dialog
 
     mydict = {'Session_id': session_id, 'Dialog_id': dialog_id, 'Speaker_id': speaker_id, 'Content': content,
@@ -103,7 +103,7 @@ def addDialog(bookName, session_id, dialog_id, speaker_id, content, time):
 
 def addQuestion(bookName, qa_id, dialog_id, response):
     myClient = pymongo.MongoClient("mongodb://root:ltlab35316@140.115.53.196:27017/")
-    myBook = myClient[bookName.replace(' ', '_')]
+    myBook = myClient[bookName.replace(' ', '_').replace("'", "")]
     QATable = myBook.QATable
 
     mydict = {'QA_Id': qa_id, 'Dialog_id': dialog_id, 'Response': response}
@@ -113,7 +113,7 @@ def addQuestion(bookName, qa_id, dialog_id, response):
 
 def addElaboration(bookName, qa_id, elaboration, confidence, sentence_id):
     myClient = pymongo.MongoClient("mongodb://root:ltlab35316@140.115.53.196:27017/")
-    myBook = myClient[bookName.replace(' ', '_')]
+    myBook = myClient[bookName.replace(' ', '_').replace("'", "")]
     Elaboration_Table = myBook.Elaboration
 
     if sentence_id == '':
@@ -126,7 +126,7 @@ def addElaboration(bookName, qa_id, elaboration, confidence, sentence_id):
 
 def addFeedback(userId, bookName, sentiment, feedback):
     myClient = pymongo.MongoClient("mongodb://root:ltlab35316@140.115.53.196:27017/")
-    myBook = myClient[bookName.replace(' ', '_')]
+    myBook = myClient[bookName.replace(' ', '_').replace("'", "")]
     Feedback_Table = myBook.Feedback
     mydict = {'User_id': userId, 'Sentiment': sentiment, 'Content': feedback}
     Feedback_Table.insert_one(mydict)

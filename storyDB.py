@@ -58,19 +58,26 @@ def coReference():
             temp_name = 'TY'
         if story_name == "TY'S TRAVELS ALL Aboard!" and temp_name == 'We':
             temp_name = 'TY, Daddy and Mom'
+        if story_name == "I Won't Go to Bed!" and temp_name == 'I':
+            temp_name = 'Jake father'
+        if story_name == "Sam the Star and Clown Fun!" and temp_name == 'I':
+            temp_name = 'Sam'
         for index in delchar:
             if temp_name[0:2] == index or temp_name[0:4] == index:
                 temp_name = temp_name.replace(index, "")
-        # print(temp_name)
+        print(temp_name)
 
         for j in result['clusters'][i]:
             count += 1
-            # print(str(j) + ":" + str(result['document'][j[0]:j[1] + 1]), end=',')
-            # print(' '.join(result['document'][j[0]:j[1] + 1]))
-            # print("story_list", end=':')
-            # print(content_list[j[0]])
+            print(str(j) + ":" + str(result['document'][j[0]:j[1] + 1]), end=',')
+            print(' '.join(result['document'][j[0]:j[1] + 1]))
+            print("story_list", end=':')
+            print(content_list[j[0]])
             if j[0] == j[1]:
-                content_list[j[0]] = temp_name
+                if story_name == 'Sheep on the Run!' and content_list[j[0]] == 'Lee':
+                    content_list[j[0]] = 'Lee'
+                else:
+                    content_list[j[0]] = temp_name
         # 計算出現次數最高者
         # if count > tempMax:
         #     tempMax = count
@@ -122,7 +129,7 @@ def story_analysis():
         # 抓出主要SVO
         svo = {}
         for j in range(len(result['pos'])):
-            if v == False and (result['pos'][j] == 'PROPN' or result['pos'][j] == 'NOUN'):
+            if v == False and (result['pos'][j] == 'PROPN' or result['pos'][j] == 'NOUN' or result['pos'][j] == 'PRON'):
                 if result['words'][j] not in c1_list:
                     c1_list.append(result['words'][j])
                 continue
@@ -240,6 +247,10 @@ def story_analysis():
                     sentence_Translate = sentence_Translate.replace('賬單', '比爾')
                 if story_name == 'The chase':
                     sentence_Translate = sentence_Translate.replace('軟盤', 'Floppy')
+                if story_name == 'Sheep on the Run!':
+                    missing_Inchworm = ['農民綠', '農民綠色']
+                    for word in missing_Inchworm:
+                        sentence_Translate = sentence_Translate.replace(word, '農夫格林')
                 break
             except Exception as e:
                 print(e)
