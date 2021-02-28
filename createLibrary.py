@@ -53,14 +53,14 @@ def addCommon():
             print(common_dict)
 
 
-def updateUser(userId, bookName, match_sentence, record_list, match_entity, match_verb, state, noMatch_count, ifContinue):
+def updateUser(userId, bookName, match_sentence, record_list, match_entity, match_verb, state, noMatch_count, continue_stage):
     # 連接mongo
 
     myClient = pymongo.MongoClient("mongodb://root:ltlab35316@140.115.53.196:27017/")
     myBotData = myClient.Chatbot
     myUserList = myBotData.UserTable
     bookTalkSummary = {'Match_sentence': match_sentence, 'noMatch_count': noMatch_count, 'Sentence_id_list': record_list, 'Entity_list': match_entity,
-                       'Verb_list': match_verb, 'Finish': state, 'Continue': ifContinue}
+                       'Verb_list': match_verb, 'Finish': state, 'Continue': continue_stage}
 
     if not list(myUserList.find()):
         # 資料庫無資料 > 直接新增一筆
@@ -90,12 +90,12 @@ def updateUser(userId, bookName, match_sentence, record_list, match_entity, matc
                 myUserList.update_one(find_user, {"$set": user_book_result})
 
 
-def addDialog(bookName, session_id, dialog_id, speaker_id, content, time):
+def addDialog(bookName, dialog_id, speaker_id, content, time):
     myClient = pymongo.MongoClient("mongodb://root:ltlab35316@140.115.53.196:27017/")
     myBook = myClient[bookName.replace(' ', '_').replace("'", "")]
     allDialog = myBook.S_R_Dialog
 
-    mydict = {'Session_id': session_id, 'Dialog_id': dialog_id, 'Speaker_id': speaker_id, 'Content': content,
+    mydict = {'Dialog_id': dialog_id, 'Speaker_id': speaker_id, 'Content': content,
               'Time': time}
     allDialog.insert_one(mydict)
     print(mydict)
