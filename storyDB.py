@@ -22,9 +22,6 @@ def createStory():
 
 
 def coReference():
-    # 紀錄每個角色出現次數
-    # tempMax = 0
-    # tempProtagonist = ''
     global content_list, entityInfo
     createStory()
     content = words.replace('\n', ' ')
@@ -41,27 +38,6 @@ def coReference():
     for i in range(len(result['clusters'])):
         count = 0
         temp_name = ' '.join(result['document'][result['clusters'][i][0][0]:result['clusters'][i][0][1] + 1])
-        # 額外處理
-        if story_name == "Fairy friends" and temp_name == 'Patch , a bad elf':
-            temp_name = 'Patch'
-        if story_name == 'Hansel and Gretel' and temp_name == 'I':
-            temp_name = 'Hansel'
-        if story_name == 'Drop It, Rocket!' and temp_name == 'I':
-            temp_name = 'Owl'
-        if story_name == 'Rocket and the Perfect Pumpkin' and temp_name == 'you':
-            temp_name = 'Rocket'
-        if story_name == 'Rocket and the Perfect Pumpkin' and temp_name == 'me':
-            temp_name = 'Bella'
-        if story_name == 'Shopping' and temp_name == 'He':
-            temp_name = 'Chip'
-        if story_name == "TY'S TRAVELS ALL Aboard!" and temp_name == 'My':
-            temp_name = 'TY'
-        if story_name == "TY'S TRAVELS ALL Aboard!" and temp_name == 'We':
-            temp_name = 'TY, Daddy and Mom'
-        if story_name == "I Won't Go to Bed!" and temp_name == 'I':
-            temp_name = 'Jake father'
-        if story_name == "Sam the Star and Clown Fun!" and temp_name == 'I':
-            temp_name = 'Sam'
         for index in delchar:
             if temp_name[0:2] == index or temp_name[0:4] == index:
                 temp_name = temp_name.replace(index, "")
@@ -78,19 +54,11 @@ def coReference():
                     content_list[j[0]] = 'Lee'
                 else:
                     content_list[j[0]] = temp_name
-        # 計算出現次數最高者
-        # if count > tempMax:
-        #     tempMax = count
-        # tempProtagonist = temp_name
-
-        entityInfo[temp_name] = {"Frequence": count}
-        # print("出現次數：" + str(count), end='\r\n\r\n')
-    # print('主角出現'+str(tempMax) + "次：" + tempProtagonist + '\n')
 
 
 def story_analysis():
     myClient = pymongo.MongoClient("mongodb://root:ltlab35316@140.115.53.196:27017/")
-    myBook = myClient[story_name.replace(' ', '_').replace("'", "")]
+    myBook = myClient[story_name.replace(' ', '_').replace("'", "").replace("!", "").replace(",", "")]
     myVerbList = myBook.VerbTable
     myKeyList = myBook.KeywordTable
     coReference()
@@ -225,32 +193,6 @@ def story_analysis():
         while True:
             try:
                 sentence_Translate = translator.translate(storyPhraseList[i], src="en", dest="zh-TW").text
-                # 額外處理翻譯問題
-                if story_name == "Fairy friends":
-                    missing_patch = ['補丁', '帕奇']
-                    missing_fairy = ['仙女', '童話']
-                    for word in missing_patch:
-                        sentence_Translate = sentence_Translate.replace(word, 'Patch')
-                    for word in missing_fairy:
-                        sentence_Translate = sentence_Translate.replace(word, '精靈')
-                if story_name == 'Hansel and Gretel':
-                    sentence_Translate = sentence_Translate.replace('a夫', '樵夫')
-                if story_name == 'A Monster is Coming!':
-                    missing_Inchworm = ['九蟲', 'ch蟲', '尺ch']
-                    for word in missing_Inchworm:
-                        sentence_Translate = sentence_Translate.replace(word, '蟲')
-                    sentence_Translate = sentence_Translate.replace('Baby Bug', '寶貝蟲')
-                    sentence_Translate = sentence_Translate.replace('Bug', '蟲子')
-                if story_name == 'Drop It, Rocket!' or story_name == 'Rocket and the Perfect Pumpkin' or story_name == 'Rocket the Brave!' or story_name == "Rocket's 100th Day of School":
-                    sentence_Translate = sentence_Translate.replace('火箭', 'Rocket')
-                if story_name == 'Jack and Jill and T-Ball Bill':
-                    sentence_Translate = sentence_Translate.replace('賬單', '比爾')
-                if story_name == 'The chase':
-                    sentence_Translate = sentence_Translate.replace('軟盤', 'Floppy')
-                if story_name == 'Sheep on the Run!':
-                    missing_Inchworm = ['農民綠', '農民綠色']
-                    for word in missing_Inchworm:
-                        sentence_Translate = sentence_Translate.replace(word, '農夫格林')
                 break
             except Exception as e:
                 print(e)
@@ -274,7 +216,54 @@ def story_analysis():
     print(myKeyDict)
 
 
+# 找出主要人物和動詞以及對話關係
+def getMaterial():
+    myClient = pymongo.MongoClient("mongodb://root:ltlab35316@140.115.53.196:27017/")
+    bookName = ''
+    myBook = myClient[bookName]
+    myMaterialList = myBook.MaterialTable
+    myKeyList = myBook.KeywordTable
+    myVerbList = myBook.VerbTable
+    temp_Entity = {}
+    temp_Verb = {}
+    find_document = myKeyList.find_one()
+
+    # 主角
+    for i in find_document['Entity_list'].keys():
+        temp_Entity[i] = find_document['Entity_list'][i]['Frequence']
+
+    # 動詞
+    find_documentVerb = find_document['Verb_list']
+    stop_words = ['is', 'are', 'was', 'were', 'do', 'can', 'may', 'would', 'ca', 'has', "'s", 'say', 'be', 'ask', 'make']
+    for i in stop_words:
+        if i in find_documentVerb:
+            del find_documentVerb[i]
+    for i in find_documentVerb.keys():
+        temp_Verb[i] = find_documentVerb[i]['Frequence']
+
+    # 對話 {'Sentence_id': sentence_id, 'Replier': replier}
+    reply_Info = []
+    for i in myVerbList.find():
+        temp = i['Speak_to']
+        if temp != '':
+            print(temp)
+            if myVerbList.find_one({'Sentence_Id': temp+1})['Speaker'] == '':
+                replier = '他們'
+            elif myVerbList.find_one({'Sentence_Id': temp+1})['Speaker'] == 'I':
+                replier = '他'
+            else:
+                replier = myVerbList.find_one({'Sentence_Id': temp+1})['Speaker']
+            reply_Info.append({'Sentence_id': temp, 'Replier': replier})
+
+    sort_Entity = sorted(temp_Entity.items(), key=lambda x: x[1], reverse=True)
+    sort_Verb = sorted(temp_Verb.items(), key=lambda x: x[1], reverse=True)
+    myMateriaDict = {'Character': sort_Entity[0][0], 'Main_Verb': sort_Verb[0][0], 'Reply': reply_Info}
+    myMaterialList.insert_one(myMateriaDict)
+    print(myMateriaDict)
+
+
 if __name__ == "__main__":
-    story_analysis()
+    getMaterial()
+    # story_analysis()
     # coReference()
     # createStory()
