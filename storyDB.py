@@ -38,6 +38,7 @@ def coReference():
     for i in range(len(result['clusters'])):
         count = 0
         temp_name = ' '.join(result['document'][result['clusters'][i][0][0]:result['clusters'][i][0][1] + 1])
+
         for index in delchar:
             if temp_name[0:2] == index or temp_name[0:4] == index:
                 temp_name = temp_name.replace(index, "")
@@ -54,6 +55,9 @@ def coReference():
                     content_list[j[0]] = 'Lee'
                 else:
                     content_list[j[0]] = temp_name
+
+        entityInfo[temp_name] = {"Frequence": count}
+        # print("出現次數：" + str(count), end='\r\n\r\n')
 
 
 def story_analysis():
@@ -216,48 +220,58 @@ def story_analysis():
     print(myKeyDict)
 
 
-# 找出主要人物和動詞以及對話關係
+# 建立主要人物、動詞、對話資料庫
 def getMaterial():
     myClient = pymongo.MongoClient("mongodb://root:ltlab35316@140.115.53.196:27017/")
-    bookName = ''
-    myBook = myClient[bookName]
+    myBook = myClient['Cowboy_Roy']
     myMaterialList = myBook.MaterialTable
     myKeyList = myBook.KeywordTable
     myVerbList = myBook.VerbTable
+    # Character   Main_Verb   Reply(Sentence_id, Replier)
     temp_Entity = {}
     temp_Verb = {}
+    # find_document = myKeyList.find()
     find_document = myKeyList.find_one()
 
     # 主角
     for i in find_document['Entity_list'].keys():
         temp_Entity[i] = find_document['Entity_list'][i]['Frequence']
 
+    # for i in find_document[0]['Entity_list'].keys():
+    #     temp_Entity[i] = find_document[0]['Entity_list'][i]['Frequency']
+
     # 動詞
     find_documentVerb = find_document['Verb_list']
-    stop_words = ['is', 'are', 'was', 'were', 'do', 'can', 'may', 'would', 'ca', 'has', "'s", 'say', 'be', 'ask', 'make']
+    # find_documentVerb = find_document[1]['Verb_list']
+    stop_words = ['is', 'are', 'was', 'were', 'do', 'can', 'may', 'would', 'ca', 'has', "'s", 'say', 'be', 'ask', 'make', 'will', 'have']
     for i in stop_words:
         if i in find_documentVerb:
             del find_documentVerb[i]
     for i in find_documentVerb.keys():
+        # temp_Verb[i] = find_documentVerb[i]['Frequency']
         temp_Verb[i] = find_documentVerb[i]['Frequence']
 
     # 對話 {'Sentence_id': sentence_id, 'Replier': replier}
-    reply_Info = []
+    sentence_id = []
     for i in myVerbList.find():
         temp = i['Speak_to']
         if temp != '':
-            print(temp)
-            if myVerbList.find_one({'Sentence_Id': temp+1})['Speaker'] == '':
-                replier = '他們'
-            elif myVerbList.find_one({'Sentence_Id': temp+1})['Speaker'] == 'I':
-                replier = '他'
-            else:
-                replier = myVerbList.find_one({'Sentence_Id': temp+1})['Speaker']
-            reply_Info.append({'Sentence_id': temp, 'Replier': replier})
+            sentence_id.append(temp)
+
+        # temp = myVerbList.find_one({'Sentence_Id': i['Sentence_Id'], "Speak_to": {'$exists': True}})
+        # if temp is not None:
+        #     sentence_id.append(i['Speak_to'])
 
     sort_Entity = sorted(temp_Entity.items(), key=lambda x: x[1], reverse=True)
     sort_Verb = sorted(temp_Verb.items(), key=lambda x: x[1], reverse=True)
-    myMateriaDict = {'Character': sort_Entity[0][0], 'Main_Verb': sort_Verb[0][0], 'Reply': reply_Info}
+    character = []
+    verb = []
+    for i in sort_Entity[0:3]:
+        character.append(i[0])
+    for i in sort_Verb[0:3]:
+        verb.append(i[0])
+    # myMateriaDict = {'Character': character, 'Main_Verb': verb}
+    myMateriaDict = {'Character': character, 'Main_Verb': verb, 'Sentence_id': sentence_id}
     myMaterialList.insert_one(myMateriaDict)
     print(myMateriaDict)
 
