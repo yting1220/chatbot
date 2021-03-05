@@ -45,7 +45,11 @@ def check_input(req):
         dialog_index = myDialogList.find().count()
         dialog_id = myDialogList.find()[dialog_index - 1]['Dialog_id'] + 1
         createLibrary.addDialog(dbBookName, dialog_id, 'Student ' + user_id, userSay, time)
-        response_dict = {"scene": {
+        response_dict = {'prompt': {
+            'suggestions':[{'title':'喜歡'},
+                           {'title':'還好'},
+                           {'title':'不喜歡'}]
+        }, "scene": {
             "next": {
                 'name': 'Expand'
             }
@@ -108,6 +112,13 @@ def check_input(req):
                         'name': scene
                     }
                 }}
+                if scene == 'Expand':
+                    response_dict.update({'prompt': {
+                        'suggestions':[{'title':'喜歡'},
+                                       {'title':'還好'},
+                                       {'title':'不喜歡'}]
+                    }
+                    })
             else:
                 firstCheck = False
                 response = ' '
@@ -1121,7 +1132,11 @@ def retrive(req):
             "firstSimple": {
                 "speech": response,
                 "text": response
-            }},
+            },
+            "suggestions": [{'title':'喜歡'},
+                            {'title':'還好'},
+                            {'title':'不喜歡'}]
+        },
             "scene": {
                 "next": {
                     'name': 'Expand'
@@ -1188,7 +1203,10 @@ def askContinue(req):
             "firstSimple": {
                 "speech": response,
                 "text": response
-            }},
+            },
+            'suggestions': [{'title':'喜歡'},
+                            {'title':'還好'},
+                            {'title':'不喜歡'}]},
             "scene": {
                 "next": {
                     'name': 'Expand'
