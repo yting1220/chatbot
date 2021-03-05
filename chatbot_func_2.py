@@ -112,13 +112,13 @@ def check_input(req):
                         'name': scene
                     }
                 }}
-                if scene == 'Expand':
-                    response_dict.update({'prompt': {
-                        'suggestions':[{'title':'喜歡'},
-                                       {'title':'還好'},
-                                       {'title':'不喜歡'}]
-                    }
-                    })
+                # if scene == 'Expand':
+                #     response_dict.update({'prompt': {
+                #         'suggestions':[{'title':'喜歡'},
+                #                        {'title':'還好'},
+                #                        {'title':'不喜歡'}]
+                #     }
+                #     })
             else:
                 firstCheck = False
                 response = ' '
@@ -1349,7 +1349,7 @@ def addElaboration(req):
 
 
 # 學生心得回饋
-def expand(req, senta):
+def expand(req):
     print("Expand")
     state = True
     checkStage = req['session']['params']['User_stage']
@@ -1403,24 +1403,37 @@ def expand(req, senta):
         dialog_id = myDialogList.find()[dialog_index - 1]['Dialog_id'] + 1
         createLibrary.addDialog(dbBookName, dialog_id, 'Student ' + user_id, userSay, time)
         input_dict = {"text": [userSay]}
-        results = senta.sentiment_classify(data=input_dict)
+        # results = senta.sentiment_classify(data=input_dict)
         if userSay == '還好' or userSay == '普通':
             response = '這樣啊！那是為甚麼呢？'
             suggest_like = False
-        else:
-            if results[0]['sentiment_key'] == "positive" and results[0]['positive_probs'] >= 0.76:
-                # 接續詢問使用者喜歡故事的原因
-                find_common = {'type': 'common_like_response'}
-                find_common2 = {'type': 'common_like_expand'}
-                find_result = myCommonList.find_one(find_common)
-                find_result2 = myCommonList.find_one(find_common2)
-                response = choice(find_result['content']) + ' ' + choice(find_result2['content'])
-                suggest_like = True
-            else:
-                find_common = {'type': 'common_like_F_expand'}
-                find_result = myCommonList.find_one(find_common)
-                response = choice(find_result['content'])
-                suggest_like = False
+        elif userSay == '喜歡':
+            # 接續詢問使用者喜歡故事的原因
+            find_common = {'type': 'common_like_response'}
+            find_common2 = {'type': 'common_like_expand'}
+            find_result = myCommonList.find_one(find_common)
+            find_result2 = myCommonList.find_one(find_common2)
+            response = choice(find_result['content']) + ' ' + choice(find_result2['content'])
+            suggest_like = True
+        elif userSay == '不喜歡':
+            find_common = {'type': 'common_like_F_expand'}
+            find_result = myCommonList.find_one(find_common)
+            response = choice(find_result['content'])
+            suggest_like = False
+        # else:
+        #     if results[0]['sentiment_key'] == "positive" and results[0]['positive_probs'] >= 0.76:
+        #         # 接續詢問使用者喜歡故事的原因
+        #         find_common = {'type': 'common_like_response'}
+        #         find_common2 = {'type': 'common_like_expand'}
+        #         find_result = myCommonList.find_one(find_common)
+        #         find_result2 = myCommonList.find_one(find_common2)
+        #         response = choice(find_result['content']) + ' ' + choice(find_result2['content'])
+        #         suggest_like = True
+        #     else:
+        #         find_common = {'type': 'common_like_F_expand'}
+        #         find_result = myCommonList.find_one(find_common)
+        #         response = choice(find_result['content'])
+        #         suggest_like = False
         expand_user = False
         response_dict = {"prompt": {
             "firstSimple": {
