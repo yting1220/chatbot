@@ -445,7 +445,7 @@ def match_book(req):
                     }},
                     "scene": {
                         "next": {
-                            'name': 'Prompt'
+                            'name': 'Prompt_character'
                         }
                     },
                     "session": {
@@ -1586,7 +1586,44 @@ def suggestion(req):
     return response_dict
 
 def Prompt_character(req):
-    print()
+
+    response = '我知道這個故事的角色有：XX，'
+    bookName = req['session']['params']['User_book']
+    dbBookName = bookName.replace("'", "").replace('!', '').replace(",", "").replace(' ', '_')
+    nowBook = myClient[dbBookName]
+    myMaterialList = nowBook['MaterialTable']
+    # 搜尋書本素材
+    find_material_result = myMaterialList.find_one({})
+    # 列出書本角色
+    response_tmp = ''
+    for character in find_material_result['Character']:
+        if response_tmp != '':
+            response_tmp += '，還有，'
+        response_tmp += character
+    response = response.replace('XX', response_tmp)
+
+    # 如果角色陣列長度為1：修改字串
+    response_tmp = '你知道他們有發生哪些事嗎？'
+    if len(find_material_result['Character']) == 1:
+        response_tmp = '你知道他有發生哪些事嗎？'
+    response += response_tmp
+
+    response_dict = {"prompt": {
+        "firstSimple": {
+            "speech": response,
+            "text": response
+        }
+    }, "session": {
+        "params": {
+            'NextScene': 'Prompt_action'
+        }
+    }, "scene": {
+        "next": {
+            'name': 'Check_input'
+        }}
+    }
+    print(response)
+    return response_dict
 
 def Prompt_action(req):
     print()
