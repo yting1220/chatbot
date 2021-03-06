@@ -41,10 +41,12 @@ def check_input(req):
         user_id = req['session']['params']['User_id']
         dbBookName = bookName.replace("'", "").replace('!', '').replace(",", "").replace(' ', '_')
         nowBook = myClient[dbBookName]
+        myMaterialList = nowBook['MaterialTable']
         myDialogList = nowBook['S_R_Dialog']
         dialog_index = myDialogList.find().count()
         dialog_id = myDialogList.find()[dialog_index - 1]['Dialog_id'] + 1
         createLibrary.addDialog(dbBookName, dialog_id, 'Student ' + user_id, userSay, time)
+        material_result = myMaterialList.find_one({})
         # 判斷接下來要進哪個引導問題
         nowScene = req['session']['params']['NowScene']
         if nowScene == 'Prompt_character':
@@ -53,7 +55,7 @@ def check_input(req):
                     'name': 'Prompt_action'
                 }
             }}
-        elif nowScene == 'Prompt_action':
+        elif nowScene == 'Prompt_action' and 'Sentence_id' in material_result:
             response_dict = {"scene": {
                 "next": {
                     'name': 'Prompt_dialog'
@@ -1601,7 +1603,8 @@ def Prompt_character(req):
         }
     }, "session": {
         "params": {
-            'NextScene': 'Prompt_action'
+            'NowScene': 'Prompt_character',
+            'NextScene': 'Prompt_response'
         }
     }, "scene": {
         "next": {
@@ -1613,7 +1616,44 @@ def Prompt_character(req):
 
 
 def Prompt_action(req):
-    print()
+
+    response = '在故事中我有看到：XX，'
+    bookName = req['session']['params']['User_book']
+    dbBookName = bookName.replace("'", "").replace('!', '').replace(",", "").replace(' ', '_')
+    nowBook = myClient[dbBookName]
+    myVerbList = nowBook['VerbTable']
+    myMaterialList = nowBook['MaterialTable']
+    # 搜尋書本素材
+    find_material_result = myMaterialList.find_one({})
+    # 列出書本動作
+    response_tmp = ''
+    for verb in find_material_result['Main_Verb']:
+        result = random.choice(list(myVerbList.find({'Verb':verb})))
+        if response_tmp != '':
+            response_tmp += '，還有，'
+        response_tmp += result['Sentence_translate']
+    response = response.replace('XX', response_tmp)
+
+    response_tmp = '你知道還有發生哪些事嗎？'
+    response += response_tmp
+
+    response_dict = {"prompt": {
+        "firstSimple": {
+            "speech": response,
+            "text": response
+        }
+    }, "session": {
+        "params": {
+            'NowScene': 'Prompt_action',
+            'NextScene': 'Prompt_response'
+        }
+    }, "scene": {
+        "next": {
+            'name': 'Check_input'
+        }}
+    }
+    print(response)
+    return response_dict
 
 
 def Prompt_dialog(req):
