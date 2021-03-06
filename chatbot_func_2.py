@@ -35,7 +35,7 @@ def check_input(req):
         firstCheck = req['session']['params']['FirstCheck']
     else:
         firstCheck = True
-    if userSay == '我說完了' or userSay == '故事都說完了':
+    if userSay == '我說完了':
         bookName = req['session']['params']['User_book']
         time = req['user']['lastSeenTime']
         user_id = req['session']['params']['User_id']
@@ -45,15 +45,26 @@ def check_input(req):
         dialog_index = myDialogList.find().count()
         dialog_id = myDialogList.find()[dialog_index - 1]['Dialog_id'] + 1
         createLibrary.addDialog(dbBookName, dialog_id, 'Student ' + user_id, userSay, time)
-        response_dict = {'prompt': {
-            'suggestions':[{'title':'喜歡'},
-                           {'title':'還好'},
-                           {'title':'不喜歡'}]
-        }, "scene": {
-            "next": {
-                'name': 'Expand'
-            }
-        }}
+        # 判斷接下來要進哪個引導問題
+        nowScene = req['session']['params']['NowScene']
+        if nowScene == 'Prompt_character':
+            response_dict = {"scene": {
+                "next": {
+                    'name': 'Prompt_action'
+                }
+            }}
+        elif nowScene == 'Prompt_action':
+            response_dict = {"scene": {
+                "next": {
+                    'name': 'Prompt_dialog'
+                }
+            }}
+        else:
+            response_dict = {"scene": {
+                "next": {
+                    'name': 'Expand'
+                }
+            }}
     else:
         if firstCheck:
             response = ' '
@@ -286,12 +297,12 @@ def match_book(req):
         similarity_book = []
         for index in myBookList.find():
             cosine = Cosine(2)
-            s1 = userSay
+            s1 = userSay.lower()
             if is_all_chinese(userSay):
                 # 若輸入全中文
                 s2 = index['bookNameTranslated']
             else:
-                s2 = index['bookName']
+                s2 = index['bookName'].lower()
             p1 = cosine.get_profile(s1)
             p2 = cosine.get_profile(s2)
             print('相似度：' + str(cosine.similarity_profiles(p1, p2)))
@@ -1132,10 +1143,7 @@ def retrive(req):
             "firstSimple": {
                 "speech": response,
                 "text": response
-            },
-            "suggestions": [{'title':'喜歡'},
-                            {'title':'還好'},
-                            {'title':'不喜歡'}]
+            }
         },
             "scene": {
                 "next": {
@@ -1203,10 +1211,7 @@ def askContinue(req):
             "firstSimple": {
                 "speech": response,
                 "text": response
-            },
-            'suggestions': [{'title':'喜歡'},
-                            {'title':'還好'},
-                            {'title':'不喜歡'}]},
+            }},
             "scene": {
                 "next": {
                     'name': 'Expand'
@@ -1352,13 +1357,7 @@ def addElaboration(req):
 def expand(req):
     print("Expand")
     state = True
-    checkStage = req['session']['params']['User_stage']
     user_id = req['session']['params']['User_id']
-    noMatch_count = req['session']['params']['User_noMatch']
-    input_sentence = req['session']['params']['User_inputCount']
-    record_list = req['session']['params']['User_record_list']
-    match_entity = req['session']['params']['User_matchEntity']
-    match_verb = req['session']['params']['User_matchVerb']
     bookName = req['session']['params']['User_book']
     userSay = req['session']['params']['User_say']
     time = req['user']['lastSeenTime']
@@ -1386,24 +1385,24 @@ def expand(req):
             "firstSimple": {
                 "speech": response,
                 "text": response
-            }},
+            }, 'suggestions': [{'title': '喜歡'},
+                               {'title': '還好'},
+                               {'title': '不喜歡'}]},
             'session': {
                 'params': {
-                    'User_expand': expand_user,
-                    'NextScene': 'Expand'
+                    'User_expand': expand_user
                 }
             }, "scene": {
                 "next": {
-                    'name': 'Check_input'
+                    'name': 'Expand'
                 }}
         }
     else:
-        # Senta情感分析
+        response = ''
+        suggest_like = False
         dialog_index = myDialogList.find().count()
         dialog_id = myDialogList.find()[dialog_index - 1]['Dialog_id'] + 1
         createLibrary.addDialog(dbBookName, dialog_id, 'Student ' + user_id, userSay, time)
-        input_dict = {"text": [userSay]}
-        # results = senta.sentiment_classify(data=input_dict)
         if userSay == '還好' or userSay == '普通':
             response = '這樣啊！那是為甚麼呢？'
             suggest_like = False
@@ -1420,20 +1419,6 @@ def expand(req):
             find_result = myCommonList.find_one(find_common)
             response = choice(find_result['content'])
             suggest_like = False
-        # else:
-        #     if results[0]['sentiment_key'] == "positive" and results[0]['positive_probs'] >= 0.76:
-        #         # 接續詢問使用者喜歡故事的原因
-        #         find_common = {'type': 'common_like_response'}
-        #         find_common2 = {'type': 'common_like_expand'}
-        #         find_result = myCommonList.find_one(find_common)
-        #         find_result2 = myCommonList.find_one(find_common2)
-        #         response = choice(find_result['content']) + ' ' + choice(find_result2['content'])
-        #         suggest_like = True
-        #     else:
-        #         find_common = {'type': 'common_like_F_expand'}
-        #         find_result = myCommonList.find_one(find_common)
-        #         response = choice(find_result['content'])
-        #         suggest_like = False
         expand_user = False
         response_dict = {"prompt": {
             "firstSimple": {
@@ -1450,8 +1435,9 @@ def expand(req):
                                User_state=state, User_expand=expand_user, NextScene='Feedback')}
         }
 
-    createLibrary.updateUser(user_id, bookName, input_sentence, record_list, match_entity, match_verb, state,
-                             noMatch_count, checkStage)
+    # 待處理
+    # createLibrary.updateUser(user_id, bookName, input_sentence, record_list, match_entity, match_verb, state,
+    #                          noMatch_count, checkStage)
     print(response)
     return response_dict
 
@@ -1625,11 +1611,64 @@ def Prompt_character(req):
     print(response)
     return response_dict
 
+
 def Prompt_action(req):
     print()
 
+
 def Prompt_dialog(req):
-    print()
+    print('對話引導')
+    response = '故事中我有看到他們在說話，像是 '
+    bookName = req['session']['params']['User_book']
+    dbBookName = bookName.replace("'", "").replace('!', '').replace(",", "").replace(' ', '_')
+    nowBook = myClient[dbBookName]
+    myVerbList = nowBook['VerbTable']
+    myMaterialList = nowBook['MaterialTable']
+    # 搜尋書本素材
+    find_material_result = myMaterialList.find_one({})
+    # 列出書本角色
+    dialog_sentenceID = choice(find_material_result['Sentence_id'])
+    result = myVerbList.find_one({'Sentence_Id': dialog_sentenceID})['Sentence_translate'] + 'X' + myVerbList.find_one({'Sentence_Id': dialog_sentenceID+1})['Sentence_translate']
+    for word in ['。', '，', '！', '“', '”', '：']:
+        result = result.replace(word, ' ')
+    dialog = result.replace('X', '，然後 ')
+    response += dialog+'你知道他們還有說了甚麼嗎？'
+
+    response_dict = {"prompt": {
+        "firstSimple": {
+            "speech": response,
+            "text": response
+        }
+    }, "session": {
+        "params": {
+            'NowScene': 'Prompt_dialog',
+            'NextScene': 'Prompt_response'
+        }
+    }, "scene": {
+        "next": {
+            'name': 'Check_input'
+        }}
+    }
+    print(response)
+    return response_dict
+
+
+def Prompt_response(req):
+    print('系統回覆')
+    response = '你說的很好唷，後面還有嗎？'
+    response_dict = {"prompt": {
+        "firstSimple": {
+            "speech": response,
+            "text": response
+        }
+    }, "scene": {
+        "next": {
+            'name': 'Check_input'
+        }}
+    }
+    print(response)
+    return response_dict
+
 
 def exit_system(req):
     print("Exit")

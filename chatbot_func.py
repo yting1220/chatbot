@@ -151,7 +151,7 @@ def connect():
 # 詢問班級
 def user_login():
     print("START_class")
-    response = '哈囉！請先告訴我你的班級唷！'
+    response = '("請注意，此應用程序使用的用戶生成的內容可能不適合所有用戶")哈囉！請先告訴我你的班級唷！'
     response_dict = {"prompt": {
         "firstSimple": {
             "speech": response,
@@ -275,12 +275,12 @@ def match_book(req):
         similarity_book = []
         for index in myBookList.find():
             cosine = Cosine(2)
-            s1 = userSay
+            s1 = userSay.lower()
             if is_all_chinese(userSay):
                 # 若輸入全中文
                 s2 = index['bookNameTranslated']
             else:
-                s2 = index['bookName']
+                s2 = index['bookName'].lower()
             p1 = cosine.get_profile(s1)
             p2 = cosine.get_profile(s2)
             print('相似度：' + str(cosine.similarity_profiles(p1, p2)))

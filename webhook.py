@@ -1,7 +1,6 @@
 from allennlp.predictors.predictor import Predictor
 from flask import Flask, request, jsonify
 from nltk.corpus import wordnet as wn
-import paddlehub as hub
 import nltk
 import chatbot_func
 
@@ -22,7 +21,7 @@ def webhook():
         elif req['handler']['name'] == 'evaluate':
             response_dict = getattr(chatbot_func, req['handler']['name'])(req, predictor)
         elif req['handler']['name'] == 'expand':
-            response_dict = getattr(chatbot_func, req['handler']['name'])(req, senta)
+            response_dict = getattr(chatbot_func, req['handler']['name'])(req)
         else:
             response_dict = getattr(chatbot_func, req['handler']['name'])(req)
     except TypeError:
@@ -33,7 +32,6 @@ def webhook():
 if __name__ == "__main__":
     wn._morphy("test", pos='v')
     nltk.download('stopwords')
-    senta = hub.Module(name="senta_bilstm")
     predictor = Predictor.from_path(
         "https://storage.googleapis.com/allennlp-public-models/biaffine-dependency-parser-ptb-2020.04.06.tar.gz")
     app.run(debug=True, port=8080)
