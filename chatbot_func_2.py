@@ -300,10 +300,14 @@ def match_book(req):
                 s2 = index['bookName'].lower()
             p1 = cosine.get_profile(s1)
             p2 = cosine.get_profile(s2)
-            print('相似度：' + str(cosine.similarity_profiles(p1, p2)))
-            value = cosine.similarity_profiles(p1, p2)
-            if value >= 0.5:
-                similarity_book.append(index['bookName'])
+            if p1 == {}:
+                # 避免輸入字串太短
+                break
+            else:
+                print('相似度：' + str(cosine.similarity_profiles(p1, p2)))
+                value = cosine.similarity_profiles(p1, p2)
+                if value >= 0.2:
+                    similarity_book.append(index['bookName'])
         print(similarity_book)
         if len(similarity_book) == 0:
             second_check = True
