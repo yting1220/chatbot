@@ -306,7 +306,7 @@ def match_book(req):
             else:
                 print('相似度：' + str(cosine.similarity_profiles(p1, p2)))
                 value = cosine.similarity_profiles(p1, p2)
-                if value >= 0.2:
+                if value >= 0.45:
                     similarity_book.append(index['bookName'])
         print(similarity_book)
         if len(similarity_book) == 0:
