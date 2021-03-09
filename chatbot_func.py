@@ -151,7 +151,7 @@ def connect():
 # 詢問班級
 def user_login():
     print("START_class")
-    response = '("請注意，此應用程序使用的用戶生成的內容可能不適合所有用戶")哈囉！請先告訴我你的班級唷！'
+    response = '哈囉！請先告訴我你的班級唷！'
     response_dict = {"prompt": {
         "firstSimple": {
             "speech": response,
@@ -160,7 +160,7 @@ def user_login():
         'suggestions': [{'title': '丁班'},
                         {'title': '戊班'}]
     }}
-    # response = '魚姐姐現在正在休息唷！'
+    # response = '("請注意，此應用程序使用的用戶生成的內容可能不適合所有用戶")魚姐姐現在正在休息唷！'
     # response_dict = {"prompt": {
     #     "firstSimple": {
     #         "speech": response,
@@ -179,7 +179,7 @@ def user_login():
 def input_userId(req):
     print("START_id")
     userInput = req['intent']['query']
-    if userInput != '丁班' and userInput != '戊班':
+    if userInput != '丁班' and userInput != '戊班' and userInput != 'DingBan':
         response = '要先點選班級對應的選項告訴我唷，'
         response_dict = {"prompt": {
             "firstSimple": {
@@ -219,7 +219,10 @@ def start_chat(req):
         response = ''
         user_id = req['session']['params']['User_id']
     else:
-        user_id = req['session']['params']['User_class'] + req['session']['params']['User_say']
+        userClass = req['session']['params']['User_class']
+        if userClass == 'DingBan':
+            userClass = '丁班'
+        user_id = userClass + req['session']['params']['User_say'].replace('號', '')
         print('使用者：' + str(user_id))
         connect()
         book_record = ''
@@ -283,10 +286,14 @@ def match_book(req):
                 s2 = index['bookName'].lower()
             p1 = cosine.get_profile(s1)
             p2 = cosine.get_profile(s2)
-            print('相似度：' + str(cosine.similarity_profiles(p1, p2)))
-            value = cosine.similarity_profiles(p1, p2)
-            if value >= 0.5:
-                similarity_book.append(index['bookName'])
+            if p1 == {}:
+                # 避免輸入字串太短
+                break
+            else:
+                print('相似度：' + str(cosine.similarity_profiles(p1, p2)))
+                value = cosine.similarity_profiles(p1, p2)
+                if value >= 0.45:
+                    similarity_book.append(index['bookName'])
         print(similarity_book)
         if len(similarity_book) == 0:
             second_check = True
@@ -427,6 +434,8 @@ def match_book(req):
                     }
                 }
             else:
+                createLibrary.updateUser(user_id, bookName, input_sentence, record_list, match_entity, match_verb,
+                                         False, 0, checkStage)
                 response_dict = {"prompt": {
                     "firstSimple": {
                         "speech": response,
@@ -641,10 +650,14 @@ def evaluate(req, predictor):
         print(s2)
         p1 = cosine.get_profile(s1)
         p2 = cosine.get_profile(s2)
-        print('第' + str(cursor['Sentence_Id']) + '句相似度：' + str(cosine.similarity_profiles(p1, p2)))
-        value = cosine.similarity_profiles(p1, p2)
-        if value >= 0.5:
-            similarity_sentence[cursor['Sentence_Id']] = value
+        if p1 == {}:
+            # 避免輸入字串太短
+            break
+        else:
+            print('第' + str(cursor['Sentence_Id']) + '句相似度：' + str(cosine.similarity_profiles(p1, p2)))
+            value = cosine.similarity_profiles(p1, p2)
+            if value >= 0.5:
+                similarity_sentence[cursor['Sentence_Id']] = value
     similarity_sentence = sorted(similarity_sentence.items(), key=lambda x: x[1], reverse=True)
     print('similarity_sentence：' + str(similarity_sentence))
     twoColumn = []
@@ -923,28 +936,33 @@ def evaluate(req, predictor):
                 QAMatch = False
                 # 比對QA裡的response
                 if all_QA_cursor.count() > 0:
+                    print('這裡會進來嗎\n')
                     for cursor in all_QA_cursor:
                         cosine = Cosine(2)
                         s1 = userSay
                         s2 = cursor['Response']
                         p1 = cosine.get_profile(s1)
                         p2 = cosine.get_profile(s2)
-                        print('QA相似度：' + str(cosine.similarity_profiles(p1, p2)))
-                        if cosine.similarity_profiles(p1, p2) >= 0.6:
-                            qa_id = cursor['QA_Id']
-                            QAMatch = True
-                            response_dict = {
-                                "scene": {
-                                    "next": {
-                                        'name': 'INQUIRE'
-                                    }
-                                },
-                                "session": {
-                                    "params": dict(User_record_list=record_list, User_matchEntity=match_entity,
-                                                   User_matchVerb=match_verb, User_inputCount=input_sentence,
-                                                   User_newChat=firstTime, User_qaId=qa_id, User_nowIndex=now_index)}
-                            }
-                            break
+                        if p1 == {} or p2 == {}:
+                            # 避免輸入字串太短
+                            continue
+                        else:
+                            print('QA相似度：' + str(cosine.similarity_profiles(p1, p2)))
+                            if cosine.similarity_profiles(p1, p2) >= 0.6:
+                                qa_id = cursor['QA_Id']
+                                QAMatch = True
+                                response_dict = {
+                                    "scene": {
+                                        "next": {
+                                            'name': 'INQUIRE'
+                                        }
+                                    },
+                                    "session": {
+                                        "params": dict(User_record_list=record_list, User_matchEntity=match_entity,
+                                                       User_matchVerb=match_verb, User_inputCount=input_sentence,
+                                                       User_newChat=firstTime, User_qaId=qa_id, User_nowIndex=now_index)}
+                                }
+                                break
                 if all_QA_cursor is None or not QAMatch:
                     noMatch_count += 1
                     myQAList = nowBook['QATable']
@@ -1217,7 +1235,6 @@ def inquire(req):
     nowBook = myClient[dbBookName]
     myElaboration = nowBook['Elaboration']
     qa_id = req['session']['params']['User_qaId']
-    result = myElaboration.find_one({'QA_Id': qa_id})
     myDialogList = nowBook['S_R_Dialog']
     dialog_index = myDialogList.find().count()
     dialog_id = myDialogList.find()[dialog_index - 1]['Dialog_id'] + 1
@@ -1225,10 +1242,14 @@ def inquire(req):
 
     find_common = {'type': 'common_QA'}
     find_common_result = myCommonList.find_one(find_common)
-    response = choice(find_common_result['content']) + " " + result['Elaboration'] + '，'
-    if myElaboration.find_one({'QA_Id': qa_id, "Sentence_Id": {'$exists': True}}) is not None:
-        record_list.append(result['Sentence_Id'])
-        now_index.append(result['Sentence_Id'])
+    result = myElaboration.find_one({'QA_Id': qa_id})
+    if result is None:
+        response = '其他小朋友之前也有跟我說過類似的故事內容耶，'
+    else:
+        response = choice(find_common_result['content']) + " " + result['Elaboration'] + '，'
+        if myElaboration.find_one({'QA_Id': qa_id, "Sentence_Id": {'$exists': True}}) is not None:
+            record_list.append(result['Sentence_Id'])
+            now_index.append(result['Sentence_Id'])
 
     state = req['session']['params']['User_state']
     createLibrary.updateUser(user_id, bookName, input_sentence, record_list, match_entity, match_verb, state,
