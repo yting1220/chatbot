@@ -645,8 +645,6 @@ def expand(req):
         expand_user = req['session']['params']['User_expand']
     else:
         expand_user = False
-    print('123')
-    print(expand_user)
     if not expand_user:
         find_common_expand = {'type': 'common_expand'}
         common_result_expand = myCommonList.find_one(find_common_expand)
