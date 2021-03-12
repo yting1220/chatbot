@@ -26,15 +26,8 @@ def check_input(req):
     print('確認說話內容')
     response = ''
     userSay = req['intent']['query']
-    if 'UserSay_temp' in req['session']['params'].keys():
-        userSay_temp = req['session']['params']['UserSay_temp']
-    else:
-        userSay_temp = []
-    userSay_temp.append(userSay)
-    if 'FirstCheck' in req['session']['params'].keys():
-        firstCheck = req['session']['params']['FirstCheck']
-    else:
-        firstCheck = True
+    scene = req['session']['params']['NextScene']
+
     if userSay == '我說完了' or userSay == '故事都說完了':
         bookName = req['session']['params']['User_book']
         time = req['user']['lastSeenTime']
@@ -51,83 +44,15 @@ def check_input(req):
             }
         }}
     else:
-        if firstCheck:
-            response = ' '
-            firstCheck = False
-            response_dict = {"prompt": {
-                "firstSimple": {
-                    "speech": response,
-                    "text": response
-                },
-                'suggestions': [{'title': '確認送出'},
-                                {'title': '重講一次'}]
-            }, "session": {
-                "params": {
-                    'UserSay_temp': userSay_temp,
-                    'FirstCheck': firstCheck
-                }
-            }, "scene": {
-                "next": {
-                    'name': 'Check_input'
-                }
+        response_dict = {"scene": {
+            "next": {
+                'name': scene
+            }
+        }, "session": {
+            "params": {
+                'User_say': userSay
             }}
-        else:
-            if userSay == '重講一次':
-                firstCheck = True
-                userSay_temp.clear()
-                response = '再重新跟我說一次吧'
-                response_dict = {"prompt": {
-                    "firstSimple": {
-                        "speech": response,
-                        "text": response
-                    }
-                }, "session": {
-                    "params": {
-                        'UserSay_temp': userSay_temp,
-                        'FirstCheck': firstCheck
-                    }
-                }, "scene": {
-                    "next": {
-                        'name': 'Check_input'
-                    }
-                }}
-            elif userSay == '確認送出':
-                firstCheck = True
-                userSay_temp.pop()
-                userSay = ''.join(userSay_temp)
-                userSay_temp.clear()
-                scene = req['session']['params']['NextScene']
-                response_dict = {"session": {
-                    "params": {
-                        'UserSay_temp': userSay_temp,
-                        'User_say': userSay,
-                        'FirstCheck': firstCheck
-                    }
-                }, "scene": {
-                    "next": {
-                        'name': scene
-                    }
-                }}
-            else:
-                firstCheck = False
-                response = ' '
-                response_dict = {"prompt": {
-                    "firstSimple": {
-                        "speech": response,
-                        "text": response
-                    },
-                    'suggestions': [{'title': '確認送出'},
-                                    {'title': '重講一次'}]
-                }, "session": {
-                    "params": {
-                        'UserSay_temp': userSay_temp,
-                        'FirstCheck': firstCheck
-                    }
-                }, "scene": {
-                    "next": {
-                        'name': 'Check_input'
-                    }
-                }}
+        }
 
     print(response)
     return response_dict
@@ -359,7 +284,7 @@ def match_book(req):
             match_entity = []
             checkStage = ''
             input_sentence = 0
-            firstTime = True
+            newChat = True
             book_finish = False
 
             dialog_index = myDialogList.find().count()
@@ -384,7 +309,7 @@ def match_book(req):
                         book_finish = True
                     else:
                         # 抓出過去的故事資料
-                        firstTime = False
+                        newChat = False
                         checkStage = user_data_load["BookTalkSummary"][bookName]['Continue']
                         input_sentence = user_data_load["BookTalkSummary"][bookName]["Match_sentence"]
                         record_list = user_data_load["BookTalkSummary"][bookName]["Sentence_id_list"]
@@ -453,7 +378,7 @@ def match_book(req):
                             'User_matchEntity': match_entity,
                             'User_matchVerb': match_verb,
                             'User_inputCount': input_sentence,
-                            'User_newChat': firstTime,
+                            'User_newChat': newChat,
                             'User_stage': checkStage
                         }
                     }
@@ -488,7 +413,11 @@ def prompt(req):
     connect()
     response = ''
     bookName = req['session']['params']['User_book']
-    firstTime = req['session']['params']['User_newChat']
+    newChat = req['session']['params']['User_newChat']
+    if 'User_firstTime' in req['session']['params'].keys():
+        firstTime = req['session']['params']['User_firstTime']
+    else:
+        firstTime = True
     input_sentence = req['session']['params']['User_inputCount']
     checkStage = req['session']['params']['User_stage']
     time = req['user']['lastSeenTime']
@@ -524,9 +453,15 @@ def prompt(req):
         if double_check:
             response = ''
         elif firstTime:
-            find_common = {'type': 'common_prompt'}
-            find_common_result = myCommonList.find_one(find_common)
-            response = choice(find_common_result['content'])
+            if not newChat:
+                response = '我記得你之前有跟我分享過一些了呢！'
+                find_common = {'type': 'common_repeat'}
+                find_common_result = myCommonList.find_one(find_common)
+                response += choice(find_common_result['content'])
+            else:
+                find_common = {'type': 'common_prompt'}
+                find_common_result = myCommonList.find_one(find_common)
+                response = choice(find_common_result['content'])
             # 記錄對話過程
             createLibrary.addDialog(dbBookName, dialog_id, 'chatbot', response, time)
         else:
@@ -864,7 +799,7 @@ def evaluate(req, predictor):
                                 "params": dict(User_record_list=record_list, User_matchEntity=match_entity,
                                                User_matchVerb=match_verb, User_inputCount=input_sentence,
                                                User_nowInput=now_user_say, User_repeatContent=repeat_content,
-                                               User_nowIndex=now_index, User_newChat=firstTime)}
+                                               User_nowIndex=now_index, User_firstTime=firstTime)}
                         }
                         break
                     else:
@@ -917,7 +852,7 @@ def evaluate(req, predictor):
                     "params": dict(User_record_list=record_list, User_matchEntity=match_entity,
                                    User_matchVerb=match_verb, User_inputCount=input_sentence,
                                    User_nowInput=now_user_say, User_repeatContent=repeat_content,
-                                   User_nowIndex=now_index, User_newChat=firstTime)}
+                                   User_nowIndex=now_index, User_firstTime=firstTime)}
             }
         else:
             if double_check:
@@ -929,14 +864,13 @@ def evaluate(req, predictor):
                     "session": {
                         "params": dict(User_record_list=record_list, User_matchEntity=match_entity,
                                        User_matchVerb=match_verb, User_inputCount=input_sentence,
-                                       User_nowIndex=now_index, User_newChat=firstTime)}
+                                       User_nowIndex=now_index, User_firstTime=firstTime)}
                 }
             else:
                 all_QA_cursor = myQATable.find()
                 QAMatch = False
                 # 比對QA裡的response
                 if all_QA_cursor.count() > 0:
-                    print('這裡會進來嗎\n')
                     for cursor in all_QA_cursor:
                         cosine = Cosine(2)
                         s1 = userSay
@@ -960,7 +894,7 @@ def evaluate(req, predictor):
                                     "session": {
                                         "params": dict(User_record_list=record_list, User_matchEntity=match_entity,
                                                        User_matchVerb=match_verb, User_inputCount=input_sentence,
-                                                       User_newChat=firstTime, User_qaId=qa_id, User_nowIndex=now_index)}
+                                                       User_firstTime=firstTime, User_qaId=qa_id, User_nowIndex=now_index)}
                                 }
                                 break
                 if all_QA_cursor is None or not QAMatch:
@@ -994,7 +928,7 @@ def evaluate(req, predictor):
                         "session": {
                             "params": dict(User_record_list=record_list, User_matchEntity=match_entity,
                                            User_matchVerb=match_verb, User_inputCount=input_sentence,
-                                           User_noMatch=noMatch_count, User_newChat=firstTime,
+                                           User_noMatch=noMatch_count, User_firstTime=firstTime,
                                            User_doubleCheck=double_check, User_nowInput=now_user_say,
                                            User_repeatContent=repeat_content)}
                     }
@@ -1363,7 +1297,6 @@ def expand(req, senta):
     match_entity = req['session']['params']['User_matchEntity']
     match_verb = req['session']['params']['User_matchVerb']
     bookName = req['session']['params']['User_book']
-    userSay = req['session']['params']['User_say']
     time = req['user']['lastSeenTime']
 
     dbBookName = bookName.replace("'", "").replace('!', '').replace(",", "").replace(' ', '_')
@@ -1392,18 +1325,15 @@ def expand(req, senta):
             }},
             'session': {
                 'params': {
-                    'User_expand': expand_user,
-                    'NextScene': 'Expand'
+                    'User_expand': expand_user
                 }
-            }, "scene": {
-                "next": {
-                    'name': 'Check_input'
-                }}
+            }
         }
     else:
         # Senta情感分析
         dialog_index = myDialogList.find().count()
         dialog_id = myDialogList.find()[dialog_index - 1]['Dialog_id'] + 1
+        userSay = req['intent']['query']
         createLibrary.addDialog(dbBookName, dialog_id, 'Student ' + user_id, userSay, time)
         input_dict = {"text": [userSay]}
         results = senta.sentiment_classify(data=input_dict)
@@ -1432,12 +1362,12 @@ def expand(req, senta):
             }},
             "scene": {
                 "next": {
-                    'name': 'Check_input'
+                    'name': 'Feedback'
                 }
             },
             "session": {
                 "params": dict(User_sentiment=suggest_like,
-                               User_state=state, User_expand=expand_user, NextScene='Feedback')}
+                               User_state=state, User_expand=expand_user)}
         }
 
     createLibrary.updateUser(user_id, bookName, input_sentence, record_list, match_entity, match_verb, state,
@@ -1449,7 +1379,7 @@ def expand(req, senta):
 # 從資料庫中取資料做為機器人給予學生之回饋
 def feedback(req):
     print('Feedback')
-    userSay = req['session']['params']['User_say']
+    userSay = req['intent']['query']
     user_id = req['session']['params']['User_id']
     bookName = req['session']['params']['User_book']
     time = req['user']['lastSeenTime']

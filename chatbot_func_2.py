@@ -24,15 +24,6 @@ def check_input(req):
     print('確認說話內容')
     response = ''
     userSay = req['intent']['query']
-    if 'UserSay_temp' in req['session']['params'].keys():
-        userSay_temp = req['session']['params']['UserSay_temp']
-    else:
-        userSay_temp = []
-    userSay_temp.append(userSay)
-    if 'FirstCheck' in req['session']['params'].keys():
-        firstCheck = req['session']['params']['FirstCheck']
-    else:
-        firstCheck = True
     if userSay == '我說完了':
         bookName = req['session']['params']['User_book']
         time = req['user']['lastSeenTime']
@@ -67,83 +58,16 @@ def check_input(req):
                 }
             }}
     else:
-        if firstCheck:
-            response = ' '
-            firstCheck = False
-            response_dict = {"prompt": {
-                "firstSimple": {
-                    "speech": response,
-                    "text": response
-                },
-                'suggestions': [{'title': '確認送出'},
-                                {'title': '重講一次'}]
-            }, "session": {
-                "params": {
-                    'UserSay_temp': userSay_temp,
-                    'FirstCheck': firstCheck
-                }
-            }, "scene": {
-                "next": {
-                    'name': 'Check_input'
-                }
+        scene = req['session']['params']['NextScene']
+        response_dict = {"scene": {
+            "next": {
+                'name': scene
+            }
+        }, "session": {
+            "params": {
+                'User_say': userSay
             }}
-        else:
-            if userSay == '重講一次':
-                firstCheck = True
-                userSay_temp.clear()
-                response = '再重新跟我說一次吧'
-                response_dict = {"prompt": {
-                    "firstSimple": {
-                        "speech": response,
-                        "text": response
-                    }
-                }, "session": {
-                    "params": {
-                        'UserSay_temp': userSay_temp,
-                        'FirstCheck': firstCheck
-                    }
-                }, "scene": {
-                    "next": {
-                        'name': 'Check_input'
-                    }
-                }}
-            elif userSay == '確認送出':
-                firstCheck = True
-                userSay_temp.pop()
-                userSay = ''.join(userSay_temp)
-                userSay_temp.clear()
-                scene = req['session']['params']['NextScene']
-                response_dict = {"session": {
-                    "params": {
-                        'UserSay_temp': userSay_temp,
-                        'User_say': userSay,
-                        'FirstCheck': firstCheck
-                    }
-                }, "scene": {
-                    "next": {
-                        'name': scene
-                    }
-                }}
-            else:
-                firstCheck = False
-                response = ' '
-                response_dict = {"prompt": {
-                    "firstSimple": {
-                        "speech": response,
-                        "text": response
-                    },
-                    'suggestions': [{'title': '確認送出'},
-                                    {'title': '重講一次'}]
-                }, "session": {
-                    "params": {
-                        'UserSay_temp': userSay_temp,
-                        'FirstCheck': firstCheck
-                    }
-                }, "scene": {
-                    "next": {
-                        'name': 'Check_input'
-                    }
-                }}
+        }
 
     print(response)
     return response_dict
@@ -235,7 +159,10 @@ def start_chat(req):
         response = ''
         user_id = req['session']['params']['User_id']
     else:
-        user_id = req['session']['params']['User_class'] + req['session']['params']['User_say']
+        userClass = req['session']['params']['User_class']
+        if userClass == 'DingBan':
+            userClass = '丁班'
+        user_id = userClass + req['session']['params']['User_say'].replace('號', '')
         print('使用者：' + str(user_id))
         connect()
         book_record = ''
@@ -635,7 +562,6 @@ def expand(req):
     state = True
     user_id = req['session']['params']['User_id']
     bookName = req['session']['params']['User_book']
-    userSay = req['session']['params']['User_say']
     time = req['user']['lastSeenTime']
     session_id = req['session']['id']
     dbBookName = bookName.replace("'", "").replace('!', '').replace(",", "").replace(' ', '_')
@@ -665,19 +591,16 @@ def expand(req):
                                {'title': '不喜歡'}]},
             'session': {
                 'params': {
-                    'User_expand': expand_user,
-                    'NextScene': 'Expand'
+                    'User_expand': expand_user
                 }
-            }, "scene": {
-                "next": {
-                    'name': 'Check_input'
-                }}
+            }
         }
     else:
         response = ''
         suggest_like = False
         dialog_index = myDialogList.find().count()
         dialog_id = myDialogList.find()[dialog_index - 1]['Dialog_id'] + 1
+        userSay = req['intent']['query']
         connectDB.addDialog(myDialogList, dialog_id, 'Student ' + user_id, userSay, time, session_id, req['scene']['name'])
         if userSay == '還好' or userSay == '普通':
             response = '這樣啊！那是為甚麼呢？'
@@ -703,12 +626,12 @@ def expand(req):
             }},
             "scene": {
                 "next": {
-                    'name': 'Check_input'
+                    'name': 'Feedback'
                 }
             },
             "session": {
                 "params": dict(User_sentiment=suggest_like,
-                               User_state=state, User_expand=expand_user, NextScene='Feedback')}
+                               User_state=state, User_expand=expand_user)}
         }
 
     connectDB.updateUser(myUserList, user_id, bookName, state)
@@ -719,7 +642,7 @@ def expand(req):
 # 從資料庫中取資料做為機器人給予學生之回饋
 def feedback(req):
     print('Feedback')
-    userSay = req['session']['params']['User_say']
+    userSay = req['intent']['query']
     user_id = req['session']['params']['User_id']
     bookName = req['session']['params']['User_book']
     session_id = req['session']['id']

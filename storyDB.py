@@ -5,7 +5,7 @@ import copy
 from nltk.stem import WordNetLemmatizer
 from googletrans import Translator
 import createLibrary
-story_name = ""
+story_name = "Jungle Journey"
 content_list = []
 words = []
 entityInfo = {}
@@ -13,7 +13,7 @@ entityInfo = {}
 
 def createStory():
     global words
-    path = "story/" + story_name + ".txt"
+    path = "story/New/" + story_name + ".txt"
     f = open(path, mode='r')
     words = f.read()
     story_content = words.replace('*', '').replace('\n', ' ')
@@ -110,9 +110,9 @@ def story_analysis():
                 if result['words'][j].lower() != 'can':
                     v = True
                     if result['words'][j] not in v_list:
-                        v_list.append(result['words'][j].lower())
                         # 找出動詞keyword
                         word = wnl.lemmatize(result['words'][j], 'v')
+                        v_list.append(word.lower())
                         verbName.append(word.lower())
                 continue
             if v == True and (result['pos'][j] == 'PROPN' or result['pos'][j] == 'NOUN'):
@@ -223,7 +223,7 @@ def story_analysis():
 # 建立主要人物、動詞、對話資料庫
 def getMaterial():
     myClient = pymongo.MongoClient("mongodb://root:ltlab35316@140.115.53.196:27017/")
-    myBook = myClient['Cowboy_Roy']
+    myBook = myClient[story_name.replace(' ', '_').replace("'", "").replace("!", "").replace(",", "")]
     myMaterialList = myBook.MaterialTable
     myKeyList = myBook.KeywordTable
     myVerbList = myBook.VerbTable
@@ -270,14 +270,14 @@ def getMaterial():
         character.append(i[0])
     for i in sort_Verb[0:3]:
         verb.append(i[0])
-    # myMateriaDict = {'Character': character, 'Main_Verb': verb}
-    myMateriaDict = {'Character': character, 'Main_Verb': verb, 'Sentence_id': sentence_id}
+    myMateriaDict = {'Character': character, 'Main_Verb': verb}
+    # myMateriaDict = {'Character': character, 'Main_Verb': verb, 'Sentence_id': sentence_id}
     myMaterialList.insert_one(myMateriaDict)
     print(myMateriaDict)
 
 
 if __name__ == "__main__":
+    story_analysis()
     getMaterial()
-    # story_analysis()
     # coReference()
     # createStory()
