@@ -1,6 +1,8 @@
 from random import choice
 from nltk.corpus import stopwords
 from strsimpy.cosine import Cosine
+from googletrans import Translator
+from nltk.corpus import wordnet
 import pymongo
 import connectDB
 import random
@@ -391,7 +393,6 @@ def match_book(req):
 
 
 def Prompt_character(req):
-
     response = '我知道這個故事的角色有：XX，'
     session_id = req['session']['id']
     time = req['user']['lastSeenTime']
@@ -441,7 +442,6 @@ def Prompt_character(req):
 
 
 def Prompt_action(req):
-
     response = '在故事中我有看到：XX，'
     session_id = req['session']['id']
     time = req['user']['lastSeenTime']
@@ -501,13 +501,18 @@ def Prompt_dialog(req):
     # 搜尋書本素材
     find_material_result = myMaterialList.find_one({})
     # 找出隨機一段對話
-    response = '故事中我有看到他們在說話，像是 '
+    find_common = {'type': 'common_Prompt_dialog'}
+    find_common_result = myCommonList.find_one(find_common)
+    response = choice(find_common_result['content'])
     dialog_sentenceID = choice(find_material_result['Sentence_id'])
-    result = myVerbList.find_one({'Sentence_Id': dialog_sentenceID})['Sentence_translate'] + 'X' + myVerbList.find_one({'Sentence_Id': dialog_sentenceID+1})['Sentence_translate']
+    result = myVerbList.find_one({'Sentence_Id': dialog_sentenceID})['Sentence_translate'] + 'X' + \
+             myVerbList.find_one({'Sentence_Id': dialog_sentenceID + 1})['Sentence_translate']
     for word in ['。', '，', '！', '：']:
         result = result.replace(word, ' ')
     dialog = result.replace('X', '，然後 ')
-    response += dialog+'你知道他們還有說了甚麼嗎？'
+    find_common = {'type': 'common_dialog_repeat'}
+    find_common_repeat = myCommonList.find_one(find_common)
+    response += dialog + choice(find_common_repeat['content'])
     # 記錄對話
     myDialogList = nowBook['S_R_Dialog']
     dialog_index = myDialogList.find().count()
@@ -533,7 +538,7 @@ def Prompt_dialog(req):
     return response_dict
 
 
-def Prompt_response(req):
+def Prompt_response(req, predictor):
     print('系統回覆')
     userSay = req['session']['params']['User_say']
     user_id = req['session']['params']['User_id']
@@ -543,11 +548,272 @@ def Prompt_response(req):
     dbBookName = bookName.replace("'", "").replace('!', '').replace(",", "").replace(' ', '_')
     nowBook = myClient[dbBookName]
     myDialogList = nowBook['S_R_Dialog']
+    myVerbList = nowBook['VerbTable']
+
     dialog_index = myDialogList.find().count()
     dialog_id = myDialogList.find()[dialog_index - 1]['Dialog_id'] + 1
-    connectDB.addDialog(myDialogList, dialog_id, 'Student ' + user_id, userSay, time, session_id, req['session']['params']['NowScene'])
-    response = '你說的很好唷，後面還有嗎？'
-    connectDB.addDialog(myDialogList, dialog_id, 'chatbot', response, time, session_id, req['session']['params']['NowScene'])
+    connectDB.addDialog(myDialogList, dialog_id, 'Student ' + user_id, userSay, time, session_id,
+                        req['session']['params']['NowScene'])
+
+    # 比對故事
+    matchStory_all = False
+    match_response = ''
+    stop_words = list(stopwords.words('english'))
+    for i in ["yourself", "there", "once", "having", "they", "its", "yours", "itself", "is", "him", "themselves",
+              "are",
+              "we", "these", "your", "his", "me", "were", "her", "himself", "this", "our", "their", "ours", "had",
+              "she", "all", "no", "them", "same", "been", "have", "yourselves", "he", "you", "herself", "has",
+              "myself",
+              "those", "i", "being", "theirs", "my", "against", "it", "she's", 'hers']:
+        stop_words.remove(i)
+    for i in range(len(stop_words)):
+        stop_words[i] = " " + stop_words[i] + " "
+    stop_words.extend([' . ', ' , ', '"', ' ! '])
+    translator = Translator()
+    # 將原句翻譯
+    while True:
+        try:
+            trans_word = translator.translate(userSay, src='zh-TW', dest="en").text
+            break
+        except Exception as e:
+            print(e)
+    similarity_sentence = {}
+    post_similarity = ''
+    for word in stop_words:
+        post_similarity = trans_word.replace(word, ' ')
+    print("USER input:" + str(post_similarity))
+    # 使用相似度比對
+    all_cursor = myVerbList.find()
+    for cursor in all_cursor:
+        cosine = Cosine(2)
+        s1 = post_similarity
+        s2 = cursor['Sentence']
+        for word in stop_words:
+            s2 = s2.replace(word, ' ')
+        print(s2)
+        p1 = cosine.get_profile(s1)
+        p2 = cosine.get_profile(s2)
+        if p1 == {}:
+            # 避免輸入字串太短
+            break
+        else:
+            print('第' + str(cursor['Sentence_Id']) + '句相似度：' + str(cosine.similarity_profiles(p1, p2)))
+            value = cosine.similarity_profiles(p1, p2)
+            if value >= 0.5:
+                similarity_sentence[cursor['Sentence_Id']] = value
+    similarity_sentence = sorted(similarity_sentence.items(), key=lambda x: x[1], reverse=True)
+    print('similarity_sentence：' + str(similarity_sentence))
+    twoColumn = []
+    if list(similarity_sentence):
+        # 有相似的句子
+        result = predictor.predict(
+            sentence=trans_word
+        )
+        user_c1 = []
+        user_v = []
+        user_c2 = []
+        v = False
+        userColumn_count = 0
+        for j in range(len(result['pos'])):
+            if v == False and (
+                    result['pos'][j] == 'PROPN' or result['pos'][j] == 'NOUN' or result['pos'][j] == 'PRON'):
+                if result['words'][j] not in user_c1:
+                    user_c1.append(result['words'][j])
+                continue
+            if (result['pos'][j] == 'VERB' and result['predicted_dependencies'][j] != 'aux') or (
+                    result['pos'][j] == 'AUX' and result['predicted_dependencies'][j] == 'root'):
+                v = True
+                if result['words'][j] not in user_v:
+                    user_v.append(result['words'][j])
+                continue
+            if v == True and (result['pos'][j] == 'PROPN' or result['pos'][j] == 'NOUN'):
+                if result['words'][j] not in user_c2:
+                    user_c2.append(result['words'][j])
+                continue
+        # 找出使用者說的話的主動詞
+        if list(user_c1):
+            userColumn_count += 1
+        if list(user_v):
+            userColumn_count += 1
+        if list(user_c2):
+            userColumn_count += 1
+
+        print('USER輸入中的S:' + str(user_c1) + ',V:' + str(user_v) + ',O:' + str(user_c2) + '欄位數量：' + str(
+            userColumn_count))
+
+        # 使用者輸入結構超過兩欄位才判斷
+        if userColumn_count >= 2:
+            for similarity_index in similarity_sentence:
+                print(similarity_index[0])
+
+                matchColumn_count = 0
+                checkC1 = False
+                checkC2 = False
+                checkVerb = False
+
+                storyMatch_count = 0
+                story_c1 = myVerbList.find_one(
+                    {'Sentence_Id': similarity_index[0], "C1": {'$exists': True}})
+                if story_c1 is not None:
+                    story_c1 = myVerbList.find_one({'Sentence_Id': similarity_index[0]})['C1']
+                    storyMatch_count += 1
+                story_v = myVerbList.find_one(
+                    {'Sentence_Id': similarity_index[0], "Verb": {'$exists': True}})
+                if story_v is not None:
+                    story_v = myVerbList.find_one({'Sentence_Id': similarity_index[0]})['Verb']
+                    storyMatch_count += 1
+                story_c2 = myVerbList.find_one(
+                    {'Sentence_Id': similarity_index[0], "C2": {'$exists': True}})
+                if story_c2 is not None:
+                    story_c2 = myVerbList.find_one({'Sentence_Id': similarity_index[0]})['C2']
+                    storyMatch_count += 1
+                # 滿足兩個欄位
+                if storyMatch_count > 1:
+                    # 先比對C1
+                    word_case = []
+                    if not checkC1 and story_c1 is not None:
+                        for word in user_c1:
+                            word_case = [word, word.lower(), word.capitalize()]
+                        word_case = list(set(word_case))
+                        # word是否在storyC1中
+                        for index in word_case:
+                            for c1_index in story_c1:
+                                if c1_index == index:
+                                    print(c1_index)
+                                    checkC1 = True
+                                    matchColumn_count += 1
+                                    break
+                            if checkC1:
+                                break
+                    # 找V
+                    if not checkVerb and story_v is not None:
+                        word_morphy = []
+                        word_case = []
+                        for word in user_v:
+                            for i in wordnet._morphy(word, pos='v'):
+                                word_morphy.append(i)
+                        for index in word_morphy:
+                            while True:
+                                try:
+                                    trans_word_pre = translator.translate(index, src='en', dest="zh-TW").text
+                                    trans_word = translator.translate(trans_word_pre, dest="en").extra_data[
+                                        'parsed']
+                                    if len(trans_word) > 3:
+                                        for i in trans_word[3][5][0]:
+                                            if i[0] == 'verb':
+                                                for trans_word_index in i[1]:
+                                                    word_case.append(trans_word_index[0])
+                                                break
+                                    break
+                                except Exception as translator_error:
+                                    print(translator_error)
+                        word_case.extend(word_morphy)
+                        print(word_case)
+                        for index in word_case:
+                            for v_index in story_v:
+                                verb_allResult = wordnet._morphy(v_index, pos='v')
+                                for j in verb_allResult:
+                                    if j == index:
+                                        print(index)
+                                        checkVerb = True
+                                        matchColumn_count += 1
+                                        break
+                                if checkVerb:
+                                    break
+                            if checkVerb:
+                                break
+                    # 找C2
+                    if not checkC2 and story_c2 is not None:
+                        word_case = []
+                        for word in user_c2:
+                            # 找同義字
+                            while True:
+                                try:
+                                    trans_word_pre = translator.translate(word, src='en', dest="zh-TW").text
+                                    trans_word = translator.translate(trans_word_pre, dest="en").extra_data[
+                                        'parsed']
+                                    if len(trans_word) > 3:
+                                        for i in trans_word[3][5][0]:
+                                            if i[0] == 'noun':
+                                                for index in i[1]:
+                                                    word_case.append(index[0])
+                                                break
+                                    break
+                                except Exception as translator_error:
+                                    print(translator_error)
+                            word_case.extend([word.lower(), word.capitalize()])
+                        word_case = list(set(word_case))
+                        print(word_case)
+                        for index in word_case:
+                            for c2_index in story_c2:
+                                if c2_index == index:
+                                    print(index)
+                                    checkC2 = True
+                                    matchColumn_count += 1
+                                    break
+                            if checkC2:
+                                break
+
+                    if matchColumn_count == 2:
+                        if similarity_index[0] not in twoColumn:
+                            twoColumn.append(similarity_index[0])
+                    print(str(checkC1) + ',' + str(checkC2) + ',' + str(checkVerb))
+                    all_cursor = myVerbList.find()
+                    if matchColumn_count == 3:
+                        # 比對成功
+                        matchStory_all = True
+                        find_common = {'type': 'common_match_T'}
+                        find_common_result = myCommonList.find_one(find_common)
+
+                        exist_elaboration = myVerbList.find_one(
+                            {"Sentence_Id": similarity_index[0], "Student_elaboration": {'$exists': True}})
+                        if exist_elaboration is not None:
+                            # 若有學生曾輸入過的詮釋 > 回答該句
+                            match_response = choice(find_common_result['content']) + ' 還有小朋友跟我分享過 ' + choice(
+                                all_cursor[similarity_index[0]]['Student_elaboration'])
+                        else:
+                            result = all_cursor[similarity_index[0]]['Sentence_translate']
+                            for word in ['。', '，', '！', '“', '”', '：']:
+                                result = result.replace(word, ' ')
+                            match_response = choice(find_common_result['content']) + result
+                        break
+                    else:
+                        similarity_sentence.remove(similarity_index)
+
+    if matchStory_all:
+        response = match_response + '那接下來還有嗎？'
+        # 獎勵機制
+    else:
+        if len(twoColumn) != 0:
+            print('有兩欄位的')
+            twoColumnMatch = choice(twoColumn)
+            print(twoColumnMatch)
+            # 比對成功
+            find_common = {'type': 'common_match_T'}
+            find_common_result = myCommonList.find_one(find_common)
+            exist_elaboration = myVerbList.find_one(
+                {"Sentence_Id": twoColumnMatch, "Student_elaboration": {'$exists': True}})
+            if exist_elaboration is not None:
+                # 若有學生曾輸入過的詮釋 > 回答該句
+                response = choice(find_common_result['content']) + ' 還有小朋友跟我分享過 ' + choice(
+                    all_cursor[twoColumnMatch]['Student_elaboration']) + '那接下來還有嗎？'
+            else:
+                result = all_cursor[twoColumnMatch]['Sentence_translate']
+                for word in ['。', '，', '！', '“', '”', '：']:
+                    result = result.replace(word, ' ')
+                response = choice(find_common_result['content']) + result + '那接下來還有嗎？'
+
+            # 獎勵機制
+        else:
+            # 沒比對到的固定回覆
+            find_common = {'type': 'common_Prompt_response'}
+            find_common_result = myCommonList.find_one(find_common)
+            response = choice(find_common_result['content'])
+
+    dialog_index = myDialogList.find().count()
+    dialog_id = myDialogList.find()[dialog_index - 1]['Dialog_id'] + 1
+    connectDB.addDialog(myDialogList, dialog_id, 'chatbot', response, time, session_id,
+                        req['session']['params']['NowScene'])
     response_dict = {"prompt": {
         "firstSimple": {
             "speech": response,
@@ -607,7 +873,8 @@ def expand(req):
         dialog_index = myDialogList.find().count()
         dialog_id = myDialogList.find()[dialog_index - 1]['Dialog_id'] + 1
         userSay = req['intent']['query']
-        connectDB.addDialog(myDialogList, dialog_id, 'Student ' + user_id, userSay, time, session_id, req['scene']['name'])
+        connectDB.addDialog(myDialogList, dialog_id, 'Student ' + user_id, userSay, time, session_id,
+                            req['scene']['name'])
         if userSay == '還好' or userSay == '普通':
             response = '這樣啊！那是為甚麼呢？'
             suggest_like = False
@@ -765,23 +1032,23 @@ def suggestion(req):
     #         }
     #     }
     # }
-    url = 'http://story.csie.ncu.edu.tw/storytelling/images/chatbot_books/'+bookName+'.jpg'
+    url = 'http://story.csie.ncu.edu.tw/storytelling/images/chatbot_books/' + bookName + '.jpg'
     response_dict = {"prompt": {
         "firstSimple": {
             "speech": response,
             "text": response
         },
-        'suggestions':[{'title':'有興趣'}, {'title':'沒興趣'}],
-        'content':{'image': {'url': url, 'alt': bookName, 'height': 1, 'width': 1}}
+        'suggestions': [{'title': '有興趣'}, {'title': '沒興趣'}],
+        'content': {'image': {'url': url, 'alt': bookName, 'height': 1, 'width': 1}}
     },
         "scene": {
             "next": {
                 'name': 'Check_input'
             }
         },
-        'session':{
+        'session': {
             'params':
-                {'nowScene':'Suggest', 'nextScene':'confirm_interest'}
+                {'nowScene': 'Suggest', 'nextScene': 'confirm_interest'}
         }
     }
     # 記錄對話
@@ -793,4 +1060,5 @@ def suggestion(req):
 def exit_system(req):
     print("Exit")
     if 'User_id' in req['session']['params'].keys() and 'User_book' in req['session']['params'].keys():
-        connectDB.updateUser(myUserList, req['session']['params']['User_id'], req['session']['params']['User_book'], req['session']['params']['User_state'])
+        connectDB.updateUser(myUserList, req['session']['params']['User_id'], req['session']['params']['User_book'],
+                             req['session']['params']['User_state'])
