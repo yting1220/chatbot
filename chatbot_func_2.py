@@ -51,6 +51,12 @@ def check_input(req):
                     'name': 'Prompt_dialog'
                 }
             }}
+        elif nowScene == 'Suggest':
+            response_dict = {"scene": {
+                "next": {
+                    'name': 'confirm_interest'
+                }
+            }}
         else:
             response_dict = {"scene": {
                 "next": {
@@ -746,17 +752,36 @@ def suggestion(req):
             like_str += choice(result_combine['content']) + sort_suggest_book[index][0]
         else:
             like_str += sort_suggest_book[index][0]
-    response = ',' + choice(find_result['content']).replace('XX', like_str) + '\n' + '謝謝你的分享！期待你下次的故事！Bye Bye！'
-
+    response = ',' + choice(find_result['content']).replace('XX', like_str) + '\n' + '對這些書有興趣嗎？'
+    # '謝謝你的分享！期待你下次的故事！Bye Bye！'
+    # response_dict = {"prompt": {
+    #     "firstSimple": {
+    #         "speech": response,
+    #         "text": response
+    #     }},
+    #     "scene": {
+    #         "next": {
+    #             'name': 'actions.scene.END_CONVERSATION'
+    #         }
+    #     }
+    # }
+    url = 'http://story.csie.ncu.edu.tw/storytelling/images/chatbot_books/'+bookName+'.jpg'
     response_dict = {"prompt": {
         "firstSimple": {
             "speech": response,
             "text": response
-        }},
+        },
+        'suggestions':[{'title':'有興趣'}, {'title':'沒興趣'}],
+        'content':{'image': {'url': url, 'alt': bookName, 'height': 1, 'width': 1}}
+    },
         "scene": {
             "next": {
-                'name': 'actions.scene.END_CONVERSATION'
+                'name': 'Check_input'
             }
+        },
+        'session':{
+            'params':
+                {'nowScene':'Suggest', 'nextScene':'confirm_interest'}
         }
     }
     # 記錄對話
