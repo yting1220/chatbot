@@ -14,14 +14,6 @@ myCommonList: object
 myUserList: object
 
 
-# 判斷是否為中文
-def is_all_chinese(text):
-    for _char in text:
-        if not '\u4e00' <= _char <= '\u9fa5':
-            return False
-    return True
-
-
 def check_input(req):
     print('確認說話內容')
     response = ''
@@ -216,27 +208,28 @@ def match_book(req):
         first_match = req['session']['params']['User_first_match']
     else:
         first_match = True
+    # 抓出所有書名
+    bookDB = []
+    for i in myBookList.find():
+        bookDB.append(i['bookName'].lower())
+        bookDB.append(i['bookNameTranslated'])
     if first_match:
         # 第一次先找出相似書名給使用者確認
         similarity_book = []
-        for index in myBookList.find():
+        for index in bookDB:
             cosine = Cosine(2)
             s1 = userSay.lower()
-            if is_all_chinese(userSay):
-                # 若輸入全中文
-                s2 = index['bookNameTranslated']
-            else:
-                s2 = index['bookName'].lower()
+            s2 = index
             p1 = cosine.get_profile(s1)
             p2 = cosine.get_profile(s2)
             if p1 == {}:
                 # 避免輸入字串太短
                 break
             else:
-                print('相似度：' + str(cosine.similarity_profiles(p1, p2)))
+                print(index + '，相似度：' + str(cosine.similarity_profiles(p1, p2)))
                 value = cosine.similarity_profiles(p1, p2)
                 if value >= 0.45:
-                    similarity_book.append(index['bookName'])
+                    similarity_book.append(index)
         print(similarity_book)
         if len(similarity_book) == 0:
             second_check = True
@@ -499,8 +492,7 @@ def Prompt_dialog(req):
     find_common_result = myCommonList.find_one(find_common)
     response = choice(find_common_result['content'])
     dialog_sentenceID = choice(find_material_result['Sentence_id'])
-    result = myVerbList.find_one({'Sentence_Id': dialog_sentenceID})['Sentence_translate'] + 'X' + \
-             myVerbList.find_one({'Sentence_Id': dialog_sentenceID + 1})['Sentence_translate']
+    result = myVerbList.find_one({'Sentence_Id': dialog_sentenceID})['Sentence_translate'] + 'X' + myVerbList.find_one({'Sentence_Id': dialog_sentenceID + 1})['Sentence_translate']
     for word in ['。', '，', '！', '：']:
         result = result.replace(word, ' ')
     dialog = result.replace('X', '，然後 ')
@@ -1014,18 +1006,6 @@ def suggestion(req):
         else:
             like_str += sort_suggest_book[index][0]
     response = ',' + choice(find_result['content']).replace('XX', like_str) + '\n' + '對這些書有興趣嗎？'
-    # '謝謝你的分享！期待你下次的故事！Bye Bye！'
-    # response_dict = {"prompt": {
-    #     "firstSimple": {
-    #         "speech": response,
-    #         "text": response
-    #     }},
-    #     "scene": {
-    #         "next": {
-    #             'name': 'actions.scene.END_CONVERSATION'
-    #         }
-    #     }
-    # }
     url = 'http://story.csie.ncu.edu.tw/storytelling/images/chatbot_books/' + sort_suggest_book[0][0] + '.jpg'
     response_dict = {"prompt": {
         "firstSimple": {
@@ -1050,6 +1030,7 @@ def suggestion(req):
     print(response)
     return response_dict
 
+
 def Interest(req):
     userSay = req['intent']['query']
     if userSay == '有興趣':
@@ -1069,6 +1050,7 @@ def Interest(req):
         }
     }
     return response_dict
+
 
 def exit_system(req):
     print("Exit")
