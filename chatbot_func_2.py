@@ -53,12 +53,6 @@ def check_input(req):
                     'name': 'Prompt_dialog'
                 }
             }}
-        elif nowScene == 'Suggest':
-            response_dict = {"scene": {
-                "next": {
-                    'name': 'confirm_interest'
-                }
-            }}
         else:
             response_dict = {"scene": {
                 "next": {
@@ -1032,14 +1026,14 @@ def suggestion(req):
     #         }
     #     }
     # }
-    url = 'http://story.csie.ncu.edu.tw/storytelling/images/chatbot_books/' + bookName + '.jpg'
+    url = 'http://story.csie.ncu.edu.tw/storytelling/images/chatbot_books/' + sort_suggest_book[0][0] + '.jpg'
     response_dict = {"prompt": {
         "firstSimple": {
             "speech": response,
             "text": response
         },
         'suggestions': [{'title': '有興趣'}, {'title': '沒興趣'}],
-        'content': {'image': {'url': url, 'alt': bookName, 'height': 1, 'width': 1}}
+        'content': {'image': {'url': url, 'alt': sort_suggest_book[0][0], 'height': 1, 'width': 1}}
     },
         "scene": {
             "next": {
@@ -1048,7 +1042,7 @@ def suggestion(req):
         },
         'session': {
             'params':
-                {'nowScene': 'Suggest', 'nextScene': 'confirm_interest'}
+                {'nowScene': 'Suggest', 'NextScene': 'Interest'}
         }
     }
     # 記錄對話
@@ -1056,6 +1050,25 @@ def suggestion(req):
     print(response)
     return response_dict
 
+def Interest(req):
+    userSay = req['intent']['query']
+    if userSay == '有興趣':
+        print()
+    elif userSay == '沒興趣':
+        print()
+    response = '謝謝你的分享！期待你下次的故事！Bye Bye！'
+    response_dict = {"prompt": {
+        "firstSimple": {
+            "speech": response,
+            "text": response
+        }},
+        "scene": {
+            "next": {
+                'name': 'actions.scene.END_CONVERSATION'
+            }
+        }
+    }
+    return response_dict
 
 def exit_system(req):
     print("Exit")
