@@ -211,26 +211,33 @@ def match_book(req):
     # 抓出所有書名
     bookDB = []
     for i in myBookList.find():
-        bookDB.append(i['bookName'].lower())
+        bookDB.append(i['bookName'])
         bookDB.append(i['bookNameTranslated'])
     if first_match:
         # 第一次先找出相似書名給使用者確認
         similarity_book = []
-        for index in bookDB:
+        for index in range(len(bookDB)):
             cosine = Cosine(2)
             s1 = userSay.lower()
-            s2 = index
+            s2 = bookDB[index].lower()
             p1 = cosine.get_profile(s1)
             p2 = cosine.get_profile(s2)
             if p1 == {}:
                 # 避免輸入字串太短
                 break
             else:
-                print(index + '，相似度：' + str(cosine.similarity_profiles(p1, p2)))
+                print(s2 + '，相似度：' + str(cosine.similarity_profiles(p1, p2)))
                 value = cosine.similarity_profiles(p1, p2)
                 if value >= 0.45:
-                    similarity_book.append(index)
+                    if index == 0:
+                        similarity_book.append(bookDB[index])
+                    else:
+                        if index % 2 == 0:
+                            similarity_book.append(bookDB[index])
+                        else:
+                            similarity_book.append(bookDB[index - 1])
         print(similarity_book)
+        similarity_book = list(set(similarity_book))
         if len(similarity_book) == 0:
             second_check = True
             first_match = True
