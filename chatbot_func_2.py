@@ -1022,7 +1022,7 @@ def suggestion(req):
         },
         'session': {
             'params':
-                {'nowScene': 'Suggest', 'NextScene': 'Interest'}
+                {'nowScene': 'Suggest', 'NextScene': 'Interest', 'suggest_book':sort_suggest_book[0:2]}
         }
     }
     # 記錄對話
@@ -1033,8 +1033,14 @@ def suggestion(req):
 
 def Interest(req):
     userSay = req['intent']['query']
+    sort_suggest_book = req['session']['params']['suggest_book']
     if userSay == '有興趣':
-        print()
+        for index in range(len(sort_suggest_book)):
+            book_result = myBookList.find_one({'bookName':sort_suggest_book[index][0]})
+            book_result_updated = connectDB.copy.deepcopy(book_result)
+            if 'Interest' not in book_result_updated:
+                book_result_updated.update({'Interest':0})
+            book_result_updated['Interest'] += 1
     elif userSay == '沒興趣':
         print()
     response = '謝謝你的分享！期待你下次的故事！Bye Bye！'
