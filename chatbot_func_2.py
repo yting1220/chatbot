@@ -774,8 +774,23 @@ def Prompt_response(req, predictor):
                         similarity_sentence.remove(similarity_index)
 
     if matchStory_all:
-        response = match_response + '那接下來還有嗎？'
+
         # 獎勵機制
+        user_result = myUserList.find_one({'User_id':user_id})
+        user_result_updated = connectDB.copy.deepcopy(user_result)
+        if 'Score' not in user_result_updated['BookTalkSummary'][bookName]:
+            user_result_updated['BookTalkSummary'][bookName].update({'Score': 0})
+        user_result_updated['BookTalkSummary'][bookName]['Score'] += 3
+        myUserList.update_one(user_result, {'$set':user_result_updated})
+
+        common_result = myCommonList.find_one({'type':'common_score'})
+        response_star = choice(common_result['content'])
+        response_star = response_star.replace('X', str(user_result_updated['BookTalkSummary'][bookName]['Score']))
+        response_star_copy = response_star
+        response_star += '⭐' * user_result_updated['BookTalkSummary'][bookName]['Score']
+
+        response = match_response +response_star+ '那接下來還有嗎？'
+        response_speech = match_response +response_star_copy+ '那接下來還有嗎？'
     else:
         if len(twoColumn) != 0:
             print('有兩欄位的')
@@ -789,27 +804,42 @@ def Prompt_response(req, predictor):
             if exist_elaboration is not None:
                 # 若有學生曾輸入過的詮釋 > 回答該句
                 response = choice(find_common_result['content']) + ' 還有小朋友跟我分享過 ' + choice(
-                    all_cursor[twoColumnMatch]['Student_elaboration']) + '那接下來還有嗎？'
+                    all_cursor[twoColumnMatch]['Student_elaboration'])
             else:
                 result = all_cursor[twoColumnMatch]['Sentence_translate']
                 for word in ['。', '，', '！', '“', '”', '：']:
                     result = result.replace(word, ' ')
-                response = choice(find_common_result['content']) + result + '那接下來還有嗎？'
+                response = choice(find_common_result['content']) + result
 
             # 獎勵機制
+            user_result = myUserList.find_one({'User_id': user_id})
+            user_result_updated = connectDB.copy.deepcopy(user_result)
+            if 'Score' not in user_result_updated['BookTalkSummary'][bookName]:
+                user_result_updated['BookTalkSummary'][bookName].update({'Score': 0})
+            user_result_updated['BookTalkSummary'][bookName]['Score'] += 3
+            myUserList.update_one(user_result, {'$set': user_result_updated})
+
+            common_result = myCommonList.find_one({'type': 'common_score'})
+            response_star = choice(common_result['content'])
+            response_star = response_star.replace('X', str(user_result_updated['BookTalkSummary'][bookName]['Score']))
+            response_star_copy = response_star
+            response_star += '⭐' * user_result_updated['BookTalkSummary'][bookName]['Score']
+
+            response += response_star + '那接下來還有嗎？'
+            response_speech = response + response_star_copy + '那接下來還有嗎？'
         else:
             # 沒比對到的固定回覆
             find_common = {'type': 'common_Prompt_response'}
             find_common_result = myCommonList.find_one(find_common)
             response = choice(find_common_result['content'])
-
+            response_speech = response
     dialog_index = myDialogList.find().count()
     dialog_id = myDialogList.find()[dialog_index - 1]['Dialog_id'] + 1
     connectDB.addDialog(myDialogList, dialog_id, 'chatbot', response, time, session_id,
                         req['session']['params']['NowScene'])
     response_dict = {"prompt": {
         "firstSimple": {
-            "speech": response,
+            "speech": response_speech,
             "text": response
         }
     }, "scene": {
@@ -1048,6 +1078,7 @@ def Interest(req):
             if 'Interest' not in book_result_updated:
                 book_result_updated.update({'Interest':0})
             book_result_updated['Interest'] += 1
+            myBookList.update_one(book_result, {'$set':book_result_updated})
     elif userSay == '沒興趣':
         print()
     response = '謝謝你的分享！期待你下次的故事！Bye Bye！'
