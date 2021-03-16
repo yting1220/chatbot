@@ -14,14 +14,6 @@ myCommonList: object
 myUserList: object
 
 
-# 判斷是否為中文
-def is_all_chinese(text):
-    for _char in text:
-        if not '\u4e00' <= _char <= '\u9fa5':
-            return False
-    return True
-
-
 def check_input(req):
     print('確認說話內容')
     response = ''
@@ -565,45 +557,49 @@ def evaluate(req, predictor):
         dialog_index = myDialogList.find().count()
         dialog_id = myDialogList.find()[dialog_index - 1]['Dialog_id'] + 1
 
-    translator = Translator()
-
-    now_user_say = userSay
-    print(userSay)
-    # 將原句翻譯
-    while True:
-        try:
-            trans_word = translator.translate(userSay, src='zh-TW', dest="en").text
-            break
-        except Exception as e:
-            print(e)
-
     similarity_sentence = {}
     post_similarity = ''
-    for word in stop_words:
-        post_similarity = trans_word.replace(word, ' ')
-    print("USER input:" + str(post_similarity))
-    # 使用相似度比對
-    all_cursor = myVerbList.find()
-    for cursor in all_cursor:
-        cosine = Cosine(2)
-        s1 = post_similarity
-        s2 = cursor['Sentence']
-        for word in stop_words:
-            s2 = s2.replace(word, ' ')
-        print(s2)
-        p1 = cosine.get_profile(s1)
-        p2 = cosine.get_profile(s2)
-        if p1 == {}:
-            # 避免輸入字串太短
-            break
-        else:
-            print('第' + str(cursor['Sentence_Id']) + '句相似度：' + str(cosine.similarity_profiles(p1, p2)))
-            value = cosine.similarity_profiles(p1, p2)
-            if value >= 0.5:
-                similarity_sentence[cursor['Sentence_Id']] = value
-    similarity_sentence = sorted(similarity_sentence.items(), key=lambda x: x[1], reverse=True)
-    print('similarity_sentence：' + str(similarity_sentence))
     twoColumn = []
+    trans_word = ''
+    now_user_say = userSay
+    print(userSay)
+
+    translator = Translator()
+    # 解決time out壯況
+    translator_error = False
+    # 將原句翻譯
+    try:
+        trans_word = translator.translate(userSay, src='zh-TW', dest="en").text
+    except Exception as e:
+        print(e)
+        translator_error = True
+
+    all_cursor = myVerbList.find()
+    if not translator_error:
+        for word in stop_words:
+            post_similarity = trans_word.replace(word, ' ')
+        print("USER input:" + str(post_similarity))
+        # 使用相似度比對
+        for cursor in all_cursor:
+            cosine = Cosine(2)
+            s1 = post_similarity
+            s2 = cursor['Sentence']
+            for word in stop_words:
+                s2 = s2.replace(word, ' ')
+            print(s2)
+            p1 = cosine.get_profile(s1)
+            p2 = cosine.get_profile(s2)
+            if p1 == {}:
+                # 避免輸入字串太短
+                break
+            else:
+                print('第' + str(cursor['Sentence_Id']) + '句相似度：' + str(cosine.similarity_profiles(p1, p2)))
+                value = cosine.similarity_profiles(p1, p2)
+                if value >= 0.5:
+                    similarity_sentence[cursor['Sentence_Id']] = value
+        similarity_sentence = sorted(similarity_sentence.items(), key=lambda x: x[1], reverse=True)
+        print('similarity_sentence：' + str(similarity_sentence))
+
     if list(similarity_sentence):
         # 有相似的句子
         result = predictor.predict(

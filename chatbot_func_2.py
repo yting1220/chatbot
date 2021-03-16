@@ -499,7 +499,8 @@ def Prompt_dialog(req):
     find_common_result = myCommonList.find_one(find_common)
     response = choice(find_common_result['content'])
     dialog_sentenceID = choice(find_material_result['Sentence_id'])
-    result = myVerbList.find_one({'Sentence_Id': dialog_sentenceID})['Sentence_translate'] + 'X' + myVerbList.find_one({'Sentence_Id': dialog_sentenceID + 1})['Sentence_translate']
+    result = myVerbList.find_one({'Sentence_Id': dialog_sentenceID})['Sentence_translate'] + 'X' + \
+             myVerbList.find_one({'Sentence_Id': dialog_sentenceID + 1})['Sentence_translate']
     for word in ['。', '，', '！', '：']:
         result = result.replace(word, ' ')
     dialog = result.replace('X', '，然後 ')
@@ -563,41 +564,47 @@ def Prompt_response(req, predictor):
     for i in range(len(stop_words)):
         stop_words[i] = " " + stop_words[i] + " "
     stop_words.extend([' . ', ' , ', '"', ' ! '])
-    translator = Translator()
-    # 將原句翻譯
-    while True:
-        try:
-            trans_word = translator.translate(userSay, src='zh-TW', dest="en").text
-            break
-        except Exception as e:
-            print(e)
+
     similarity_sentence = {}
     post_similarity = ''
-    for word in stop_words:
-        post_similarity = trans_word.replace(word, ' ')
-    print("USER input:" + str(post_similarity))
-    # 使用相似度比對
-    all_cursor = myVerbList.find()
-    for cursor in all_cursor:
-        cosine = Cosine(2)
-        s1 = post_similarity
-        s2 = cursor['Sentence']
-        for word in stop_words:
-            s2 = s2.replace(word, ' ')
-        print(s2)
-        p1 = cosine.get_profile(s1)
-        p2 = cosine.get_profile(s2)
-        if p1 == {}:
-            # 避免輸入字串太短
-            break
-        else:
-            print('第' + str(cursor['Sentence_Id']) + '句相似度：' + str(cosine.similarity_profiles(p1, p2)))
-            value = cosine.similarity_profiles(p1, p2)
-            if value >= 0.5:
-                similarity_sentence[cursor['Sentence_Id']] = value
-    similarity_sentence = sorted(similarity_sentence.items(), key=lambda x: x[1], reverse=True)
-    print('similarity_sentence：' + str(similarity_sentence))
     twoColumn = []
+    trans_word = ''
+    translator = Translator()
+    # 解決time out壯況
+    translator_error = False
+    # 將原句翻譯
+    try:
+        trans_word = translator.translate(userSay, src='zh-TW', dest="en").text
+    except Exception as e:
+        print(e)
+        translator_error = True
+
+    all_cursor = myVerbList.find()
+    if not translator_error:
+        for word in stop_words:
+            post_similarity = trans_word.replace(word, ' ')
+        print("USER input:" + str(post_similarity))
+        # 使用相似度比對
+        for cursor in all_cursor:
+            cosine = Cosine(2)
+            s1 = post_similarity
+            s2 = cursor['Sentence']
+            for word in stop_words:
+                s2 = s2.replace(word, ' ')
+            print(s2)
+            p1 = cosine.get_profile(s1)
+            p2 = cosine.get_profile(s2)
+            if p1 == {}:
+                # 避免輸入字串太短
+                break
+            else:
+                print('第' + str(cursor['Sentence_Id']) + '句相似度：' + str(cosine.similarity_profiles(p1, p2)))
+                value = cosine.similarity_profiles(p1, p2)
+                if value >= 0.5:
+                    similarity_sentence[cursor['Sentence_Id']] = value
+        similarity_sentence = sorted(similarity_sentence.items(), key=lambda x: x[1], reverse=True)
+        print('similarity_sentence：' + str(similarity_sentence))
+
     if list(similarity_sentence):
         # 有相似的句子
         result = predictor.predict(
@@ -777,21 +784,21 @@ def Prompt_response(req, predictor):
     if matchStory_all:
         if userClass == '戊班':
             # 獎勵機制
-            user_result = myUserList.find_one({'User_id':user_id})
+            user_result = myUserList.find_one({'User_id': user_id})
             user_result_updated = connectDB.copy.deepcopy(user_result)
             if 'Score' not in user_result_updated['BookTalkSummary'][bookName]:
                 user_result_updated['BookTalkSummary'][bookName].update({'Score': 0})
             user_result_updated['BookTalkSummary'][bookName]['Score'] += 3
-            myUserList.update_one(user_result, {'$set':user_result_updated})
+            myUserList.update_one(user_result, {'$set': user_result_updated})
 
-            common_result = myCommonList.find_one({'type':'common_score'})
+            common_result = myCommonList.find_one({'type': 'common_score'})
             response_star = choice(common_result['content'])
             response_star = response_star.replace('X', str(user_result_updated['BookTalkSummary'][bookName]['Score']))
             response_star_copy = response_star
             response_star += '⭐' * user_result_updated['BookTalkSummary'][bookName]['Score']
 
-            response = match_response +response_star+ '那接下來還有嗎？'
-            response_speech = match_response +response_star_copy+ '那接下來還有嗎？'
+            response = match_response + response_star + '那接下來還有嗎？'
+            response_speech = match_response + response_star_copy + '那接下來還有嗎？'
         else:
             response = match_response + '那接下來還有嗎？'
             response_speech = match_response + '那接下來還有嗎？'
@@ -826,7 +833,8 @@ def Prompt_response(req, predictor):
 
                 common_result = myCommonList.find_one({'type': 'common_score'})
                 response_star = choice(common_result['content'])
-                response_star = response_star.replace('X', str(user_result_updated['BookTalkSummary'][bookName]['Score']))
+                response_star = response_star.replace('X',
+                                                      str(user_result_updated['BookTalkSummary'][bookName]['Score']))
                 response_star_copy = response_star
                 response_star += '⭐' * user_result_updated['BookTalkSummary'][bookName]['Score']
 
@@ -841,7 +849,6 @@ def Prompt_response(req, predictor):
             find_common_result = myCommonList.find_one(find_common)
             response = choice(find_common_result['content'])
             response_speech = response
-
 
     dialog_index = myDialogList.find().count()
     dialog_id = myDialogList.find()[dialog_index - 1]['Dialog_id'] + 1
@@ -1069,7 +1076,7 @@ def suggestion(req):
         },
         'session': {
             'params':
-                {'nowScene': 'Suggest', 'NextScene': 'Interest', 'suggest_book':sort_suggest_book[0:2]}
+                {'nowScene': 'Suggest', 'NextScene': 'Interest', 'suggest_book': sort_suggest_book[0:2]}
         }
     }
     # 記錄對話
@@ -1083,12 +1090,12 @@ def Interest(req):
     sort_suggest_book = req['session']['params']['suggest_book']
     if userSay == '有興趣':
         for index in range(len(sort_suggest_book)):
-            book_result = myBookList.find_one({'bookName':sort_suggest_book[index][0]})
+            book_result = myBookList.find_one({'bookName': sort_suggest_book[index][0]})
             book_result_updated = connectDB.copy.deepcopy(book_result)
             if 'Interest' not in book_result_updated:
-                book_result_updated.update({'Interest':0})
+                book_result_updated.update({'Interest': 0})
             book_result_updated['Interest'] += 1
-            myBookList.update_one(book_result, {'$set':book_result_updated})
+            myBookList.update_one(book_result, {'$set': book_result_updated})
     elif userSay == '沒興趣':
         print()
     response = '謝謝你的分享！期待你下次的故事！Bye Bye！'
