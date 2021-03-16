@@ -535,6 +535,7 @@ def Prompt_response(req, predictor):
     print('系統回覆')
     userSay = req['session']['params']['User_say']
     user_id = req['session']['params']['User_id']
+    userClass = req['session']['params']['User_class']
     session_id = req['session']['id']
     time = req['user']['lastSeenTime']
     bookName = req['session']['params']['User_book']
@@ -774,23 +775,26 @@ def Prompt_response(req, predictor):
                         similarity_sentence.remove(similarity_index)
 
     if matchStory_all:
+        if userClass == '戊班':
+            # 獎勵機制
+            user_result = myUserList.find_one({'User_id':user_id})
+            user_result_updated = connectDB.copy.deepcopy(user_result)
+            if 'Score' not in user_result_updated['BookTalkSummary'][bookName]:
+                user_result_updated['BookTalkSummary'][bookName].update({'Score': 0})
+            user_result_updated['BookTalkSummary'][bookName]['Score'] += 3
+            myUserList.update_one(user_result, {'$set':user_result_updated})
 
-        # 獎勵機制
-        user_result = myUserList.find_one({'User_id':user_id})
-        user_result_updated = connectDB.copy.deepcopy(user_result)
-        if 'Score' not in user_result_updated['BookTalkSummary'][bookName]:
-            user_result_updated['BookTalkSummary'][bookName].update({'Score': 0})
-        user_result_updated['BookTalkSummary'][bookName]['Score'] += 3
-        myUserList.update_one(user_result, {'$set':user_result_updated})
+            common_result = myCommonList.find_one({'type':'common_score'})
+            response_star = choice(common_result['content'])
+            response_star = response_star.replace('X', str(user_result_updated['BookTalkSummary'][bookName]['Score']))
+            response_star_copy = response_star
+            response_star += '⭐' * user_result_updated['BookTalkSummary'][bookName]['Score']
 
-        common_result = myCommonList.find_one({'type':'common_score'})
-        response_star = choice(common_result['content'])
-        response_star = response_star.replace('X', str(user_result_updated['BookTalkSummary'][bookName]['Score']))
-        response_star_copy = response_star
-        response_star += '⭐' * user_result_updated['BookTalkSummary'][bookName]['Score']
-
-        response = match_response +response_star+ '那接下來還有嗎？'
-        response_speech = match_response +response_star_copy+ '那接下來還有嗎？'
+            response = match_response +response_star+ '那接下來還有嗎？'
+            response_speech = match_response +response_star_copy+ '那接下來還有嗎？'
+        else:
+            response = match_response + '那接下來還有嗎？'
+            response_speech = match_response + '那接下來還有嗎？'
     else:
         if len(twoColumn) != 0:
             print('有兩欄位的')
@@ -811,28 +815,34 @@ def Prompt_response(req, predictor):
                     result = result.replace(word, ' ')
                 response = choice(find_common_result['content']) + result
 
-            # 獎勵機制
-            user_result = myUserList.find_one({'User_id': user_id})
-            user_result_updated = connectDB.copy.deepcopy(user_result)
-            if 'Score' not in user_result_updated['BookTalkSummary'][bookName]:
-                user_result_updated['BookTalkSummary'][bookName].update({'Score': 0})
-            user_result_updated['BookTalkSummary'][bookName]['Score'] += 3
-            myUserList.update_one(user_result, {'$set': user_result_updated})
+            if userClass == '戊班':
+                # 獎勵機制
+                user_result = myUserList.find_one({'User_id': user_id})
+                user_result_updated = connectDB.copy.deepcopy(user_result)
+                if 'Score' not in user_result_updated['BookTalkSummary'][bookName]:
+                    user_result_updated['BookTalkSummary'][bookName].update({'Score': 0})
+                user_result_updated['BookTalkSummary'][bookName]['Score'] += 3
+                myUserList.update_one(user_result, {'$set': user_result_updated})
 
-            common_result = myCommonList.find_one({'type': 'common_score'})
-            response_star = choice(common_result['content'])
-            response_star = response_star.replace('X', str(user_result_updated['BookTalkSummary'][bookName]['Score']))
-            response_star_copy = response_star
-            response_star += '⭐' * user_result_updated['BookTalkSummary'][bookName]['Score']
+                common_result = myCommonList.find_one({'type': 'common_score'})
+                response_star = choice(common_result['content'])
+                response_star = response_star.replace('X', str(user_result_updated['BookTalkSummary'][bookName]['Score']))
+                response_star_copy = response_star
+                response_star += '⭐' * user_result_updated['BookTalkSummary'][bookName]['Score']
 
-            response += response_star + '那接下來還有嗎？'
-            response_speech = response + response_star_copy + '那接下來還有嗎？'
+                response += response_star + '那接下來還有嗎？'
+                response_speech = response + response_star_copy + '那接下來還有嗎？'
+            else:
+                response += '那接下來還有嗎？'
+                response_speech = response
         else:
             # 沒比對到的固定回覆
             find_common = {'type': 'common_Prompt_response'}
             find_common_result = myCommonList.find_one(find_common)
             response = choice(find_common_result['content'])
             response_speech = response
+
+
     dialog_index = myDialogList.find().count()
     dialog_id = myDialogList.find()[dialog_index - 1]['Dialog_id'] + 1
     connectDB.addDialog(myDialogList, dialog_id, 'chatbot', response, time, session_id,
