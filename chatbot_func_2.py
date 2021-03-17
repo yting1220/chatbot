@@ -793,6 +793,7 @@ def Prompt_response(req, predictor):
                         break
                     else:
                         similarity_sentence.remove(similarity_index)
+    noMatch = False
 
     if matchStory_all:
         if userClass == '戊班':
@@ -862,6 +863,7 @@ def Prompt_response(req, predictor):
             find_common_result = myCommonList.find_one(find_common)
             response = choice(find_common_result['content'])
             response_speech = response
+            noMatch = True
 
     dialog_index = myDialogList.find().count()
     dialog_id = myDialogList.find()[dialog_index - 1]['Dialog_id'] + 1
@@ -877,6 +879,9 @@ def Prompt_response(req, predictor):
             'name': 'Check_input'
         }}
     }
+    if not noMatch:
+        response_dict['prompt'].update({'content':{'image': {'url': 'https://pngimg.com/uploads/star/star_PNG41495.png', 'alt': 'star', 'height': 1, 'width': 1}}})
+
     print(response)
     return response_dict
 
