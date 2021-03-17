@@ -387,7 +387,10 @@ def match_book(req):
 
 
 def Prompt_character(req):
-    response = '我知道這個故事的角色有：XX，'
+    find_common = {'type': 'common_Prompt_character'}
+    find_common_result = myCommonList.find_one(find_common)
+    response = choice(find_common_result['content'])
+
     session_id = req['session']['id']
     time = req['user']['lastSeenTime']
     bookName = req['session']['params']['User_book']
@@ -405,7 +408,10 @@ def Prompt_character(req):
     response = response.replace('XX', response_tmp)
 
     # 如果角色陣列長度為1：修改字串
-    response_tmp = '你知道他們有發生哪些事嗎？'
+    find_common = {'type': 'common_character_repeat'}
+    find_common_repeat = myCommonList.find_one(find_common)
+    response_tmp = choice(find_common_repeat['content'])
+
     if len(find_material_result['Character']) == 1:
         response_tmp = '你知道他有發生哪些事嗎？'
     response += response_tmp
@@ -436,7 +442,10 @@ def Prompt_character(req):
 
 
 def Prompt_action(req):
-    response = '在故事中我有看到：XX，'
+    find_common = {'type': 'common_Prompt_action'}
+    find_common_result = myCommonList.find_one(find_common)
+    response = choice(find_common_result['content'])
+
     session_id = req['session']['id']
     time = req['user']['lastSeenTime']
     bookName = req['session']['params']['User_book']
@@ -455,7 +464,10 @@ def Prompt_action(req):
         response_tmp += result['Sentence_translate']
     response = response.replace('XX', response_tmp)
 
-    response_tmp = '你知道還有發生哪些事嗎？'
+    find_common = {'type': 'common_action_repeat'}
+    find_common_repeat = myCommonList.find_one(find_common)
+    response_tmp = choice(find_common_repeat['content'])
+
     response += response_tmp
 
     # 記錄對話
@@ -1060,7 +1072,7 @@ def suggestion(req):
         else:
             like_str += sort_suggest_book[index][0]
     response = ',' + choice(find_result['content']).replace('XX', like_str) + '\n' + '對這些書有興趣嗎？'
-    url = 'http://story.csie.ncu.edu.tw/storytelling/images/chatbot_books/' + sort_suggest_book[0][0] + '.jpg'
+    url = 'http://story.csie.ncu.edu.tw/storytelling/images/chatbot_books/' + sort_suggest_book[0][0].replace(' ','%20') + '.jpg'
     response_dict = {"prompt": {
         "firstSimple": {
             "speech": response,
