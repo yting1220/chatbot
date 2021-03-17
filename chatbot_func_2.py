@@ -18,7 +18,7 @@ def check_input(req):
     print('確認說話內容')
     response = ''
     userSay = req['intent']['query']
-    if userSay == '我說完了':
+    if userSay == '沒有了':
         bookName = req['session']['params']['User_book']
         time = req['user']['lastSeenTime']
         user_id = req['session']['params']['User_id']
@@ -403,7 +403,7 @@ def Prompt_character(req):
     response_tmp = ''
     for character in find_material_result['Character']:
         if response_tmp != '':
-            response_tmp += '，還有，'
+            response_tmp += '，還有'
         response_tmp += character
     response = response.replace('XX', response_tmp)
 
@@ -460,8 +460,10 @@ def Prompt_action(req):
     for verb in find_material_result['Main_Verb']:
         result = random.choice(list(myVerbList.find({'Verb': verb})))
         if response_tmp != '':
-            response_tmp += '，還有，'
+            response_tmp += '，還有'
         response_tmp += result['Sentence_translate']
+    for word in ['。', '！', '：']:
+        response_tmp = response_tmp.replace(word, ' ')
     response = response.replace('XX', response_tmp)
 
     find_common = {'type': 'common_action_repeat'}
@@ -511,8 +513,7 @@ def Prompt_dialog(req):
     find_common_result = myCommonList.find_one(find_common)
     response = choice(find_common_result['content'])
     dialog_sentenceID = choice(find_material_result['Sentence_id'])
-    result = myVerbList.find_one({'Sentence_Id': dialog_sentenceID})['Sentence_translate'] + 'X' + \
-             myVerbList.find_one({'Sentence_Id': dialog_sentenceID + 1})['Sentence_translate']
+    result = myVerbList.find_one({'Sentence_Id': dialog_sentenceID})['Sentence_translate'] + 'X' + myVerbList.find_one({'Sentence_Id': dialog_sentenceID + 1})['Sentence_translate']
     for word in ['。', '，', '！', '：']:
         result = result.replace(word, ' ')
     dialog = result.replace('X', '，然後 ')
@@ -1072,7 +1073,9 @@ def suggestion(req):
         else:
             like_str += sort_suggest_book[index][0]
     response = ',' + choice(find_result['content']).replace('XX', like_str) + '\n' + '對這些書有興趣嗎？'
-    url = 'http://story.csie.ncu.edu.tw/storytelling/images/chatbot_books/' + sort_suggest_book[0][0].replace(' ','%20') + '.jpg'
+    url = 'http://story.csie.ncu.edu.tw/storytelling/images/chatbot_books/' + sort_suggest_book[0][0].replace(' ',
+                                                                                                              '%20') + '.jpg'
+    print('URL:'+url)
     response_dict = {"prompt": {
         "firstSimple": {
             "speech": response,
@@ -1098,7 +1101,7 @@ def suggestion(req):
 
 
 def Interest(req):
-    userSay = req['intent']['query']
+    userSay = req['session']['params']['User_say']
     sort_suggest_book = req['session']['params']['suggest_book']
     if userSay == '有興趣':
         for index in range(len(sort_suggest_book)):
