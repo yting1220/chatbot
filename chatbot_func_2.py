@@ -879,7 +879,7 @@ def Prompt_response(req, predictor):
             'name': 'Check_input'
         }}
     }
-    if not noMatch:
+    if not noMatch and userClass == '戊班':
         response_dict['prompt'].update({'content':{'image': {'url': 'https://pngimg.com/uploads/star/star_PNG41495.png', 'alt': 'star', 'height': 1, 'width': 1}}})
 
     print(response)
