@@ -457,11 +457,11 @@ def Prompt_action(req):
     find_material_result = myMaterialList.find_one({})
     # 列出書本動作
     response_tmp = ''
-    for verb in find_material_result['Main_Verb']:
-        result = random.choice(list(myVerbList.find({'Verb': verb})))
-        if response_tmp != '':
-            response_tmp += '，還有'
-        response_tmp += result['Sentence_translate']
+    # for verb in find_material_result['Main_Verb']:
+    result = random.choice(list(myVerbList.find({'Verb': find_material_result['Main_Verb'][0]})))
+    # if response_tmp != '':
+    #     response_tmp += '，還有'
+    response_tmp += result['Sentence_translate']
     for word in ['。', '！', '：']:
         response_tmp = response_tmp.replace(word, ' ')
     response = response.replace('XX', response_tmp)
@@ -783,7 +783,9 @@ def Prompt_response(req, predictor):
                             {"Sentence_Id": similarity_index[0], "Student_elaboration": {'$exists': True}})
                         if exist_elaboration is not None:
                             # 若有學生曾輸入過的詮釋 > 回答該句
-                            match_response = choice(find_common_result['content']) + ' 還有小朋友跟我分享過 ' + choice(
+                            find_common_QA = {'type': 'common_QA'}
+                            find_common_result_QA = myCommonList.find_one(find_common_QA)
+                            match_response = choice(find_common_result['content']) + choice(find_common_result_QA['content']) + choice(
                                 all_cursor[similarity_index[0]]['Student_elaboration'])
                         else:
                             result = all_cursor[similarity_index[0]]['Sentence_translate']
@@ -828,8 +830,9 @@ def Prompt_response(req, predictor):
                 {"Sentence_Id": twoColumnMatch, "Student_elaboration": {'$exists': True}})
             if exist_elaboration is not None:
                 # 若有學生曾輸入過的詮釋 > 回答該句
-                response = choice(find_common_result['content']) + ' 還有小朋友跟我分享過 ' + choice(
-                    all_cursor[twoColumnMatch]['Student_elaboration'])
+                find_common_QA = {'type': 'common_QA'}
+                find_common_result_QA = myCommonList.find_one(find_common_QA)
+                response = choice(find_common_result['content']) + choice(find_common_result_QA['content']) + choice(all_cursor[twoColumnMatch]['Student_elaboration'])
             else:
                 result = all_cursor[twoColumnMatch]['Sentence_translate']
                 for word in ['。', '，', '！', '“', '”', '：']:
@@ -880,7 +883,7 @@ def Prompt_response(req, predictor):
         }}
     }
     if not noMatch and userClass == '戊班':
-        response_dict['prompt'].update({'content':{'image': {'url': 'https://pngimg.com/uploads/star/star_PNG41495.png', 'alt': 'star', 'height': 1, 'width': 1}}})
+        response_dict['prompt'].update({'content': {'image': {'url': 'https://pngimg.com/uploads/star/star_PNG41495.png', 'alt': 'star', 'height': 1, 'width': 1}}})
 
     print(response)
     return response_dict
@@ -933,6 +936,7 @@ def expand(req):
         userSay = req['intent']['query']
         connectDB.addDialog(myDialogList, dialog_id, 'Student ' + user_id, userSay, time, session_id,
                             req['scene']['name'])
+        scene = 'Feedback'
         if userSay == '還好' or userSay == '普通':
             response = '這樣啊！那是為甚麼呢？'
             suggest_like = False
@@ -949,6 +953,8 @@ def expand(req):
             find_result = myCommonList.find_one(find_common)
             response = choice(find_result['content'])
             suggest_like = False
+        else:
+            scene = 'Expand'
         expand_user = False
         response_dict = {"prompt": {
             "firstSimple": {
@@ -957,7 +963,7 @@ def expand(req):
             }},
             "scene": {
                 "next": {
-                    'name': 'Feedback'
+                    'name': scene
                 }
             },
             "session": {
@@ -1007,7 +1013,51 @@ def feedback(req):
         else:
             choose_number = 0
             response = choice(find_result['content']) + " " + result_like[choose_number]['Content']
-    response += '\n'
+    response += '\n我可以推薦你一些書，你想看看嗎？'
+    response_dict = {"prompt": {
+        "firstSimple": {
+            "speech": response,
+            "text": response
+        },
+        'suggestions': [{'title': '好'}, {'title': '不用了'}]},
+        "scene": {
+            "next": {
+                'name': 'Check_suggestion'
+            }
+        }
+    }
+    connectDB.addFeedback(myFeedback, user_id, suggest_like, userSay)
+    # 記錄對話過程
+    dialog_index = myDialogList.find().count()
+    dialog_id = myDialogList.find()[dialog_index - 1]['Dialog_id'] + 1
+    connectDB.addDialog(myDialogList, dialog_id, 'chatbot', response, time, session_id, req['scene']['name'])
+    print(response)
+    return response_dict
+
+
+# 判斷是否進入推薦
+def Check_suggestion(req):
+    print('Suggestion or not')
+    bookName = req['session']['params']['User_book']
+    session_id = req['session']['id']
+    time = req['user']['lastSeenTime']
+    dbBookName = bookName.replace("'", "").replace('!', '').replace(",", "").replace(' ', '_')
+    nowBook = myClient[dbBookName]
+    myDialogList = nowBook['S_R_Dialog']
+    userSay = req['intent']['query']
+    user_id = req['session']['params']['User_id']
+    # 記錄對話過程
+    dialog_index = myDialogList.find().count()
+    dialog_id = myDialogList.find()[dialog_index - 1]['Dialog_id'] + 1
+    connectDB.addDialog(myDialogList, dialog_id, 'Student ' + user_id, userSay, time, session_id, req['scene']['name'])
+
+    if userSay == '不用了':
+        scene = 'actions.scene.END_CONVERSATION'
+        response = '好唷！謝謝你的分享！期待你下次的故事！Bye Bye！'
+    else:
+        scene = 'Suggest'
+        response = '好唷！沒問題！'
+
     response_dict = {"prompt": {
         "firstSimple": {
             "speech": response,
@@ -1015,11 +1065,10 @@ def feedback(req):
         }},
         "scene": {
             "next": {
-                'name': 'Suggest'
+                'name': scene
             }
         }
     }
-    connectDB.addFeedback(myFeedback, user_id, suggest_like, userSay)
     # 記錄對話過程
     dialog_index = myDialogList.find().count()
     dialog_id = myDialogList.find()[dialog_index - 1]['Dialog_id'] + 1
@@ -1060,11 +1109,8 @@ def suggestion(req):
         p1 = cosine.get_profile(sample_book.replace('   ', ' ').replace('  ', ' '))
         p2 = cosine.get_profile(story_content.replace('   ', ' ').replace('  ', ' '))
         suggest_book[book['bookName']] = cosine.similarity_profiles(p1, p2)
-    find_condition = {'type': 'common_combine'}
-    result_combine = myCommonList.find_one(find_condition)
-    like_str = ''
     if suggest_like:
-        # 學生喜歡則列出前3高相似度的書籍
+        # 學生喜歡則列出1本高相似度的書籍
         find_common = {'type': 'common_like_T'}
         find_result = myCommonList.find_one(find_common)
         sort_suggest_book = sorted(suggest_book.items(), key=lambda x: x[1], reverse=True)
@@ -1072,12 +1118,9 @@ def suggestion(req):
         find_common = {'type': 'common_like_F'}
         find_result = myCommonList.find_one(find_common)
         sort_suggest_book = sorted(suggest_book.items(), key=lambda x: x[1], reverse=False)
-    for index in range(len(sort_suggest_book[0:2])):
-        if index > 0:
-            like_str += choice(result_combine['content']) + sort_suggest_book[index][0]
-        else:
-            like_str += sort_suggest_book[index][0]
-    response = ',' + choice(find_result['content']).replace('XX', like_str) + '\n' + '對這些書有興趣嗎？'
+    find_common_suggestion = {'type': 'common_suggestion_response'}
+    find_suggestion = myCommonList.find_one(find_common_suggestion)
+    response = ',' + choice(find_result['content']).replace('XX', sort_suggest_book[0][0]) + '\n' + choice(find_suggestion['content'])
     url = 'http://story.csie.ncu.edu.tw/storytelling/images/chatbot_books/' + sort_suggest_book[0][0].replace(' ',
                                                                                                               '%20') + '.jpg'
     print('URL:'+url)
@@ -1118,7 +1161,7 @@ def Interest(req):
             myBookList.update_one(book_result, {'$set': book_result_updated})
     elif userSay == '沒興趣':
         print()
-    response = '謝謝你的分享！期待你下次的故事！Bye Bye！'
+    response = '我知道了！那謝謝你的分享！期待你下次的故事！Bye Bye！'
     response_dict = {"prompt": {
         "firstSimple": {
             "speech": response,
