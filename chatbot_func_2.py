@@ -566,6 +566,7 @@ def Prompt_response(req, predictor):
     # 比對故事
     matchStory_all = False
     match_response = ''
+    match_repeat = ''
     stop_words = list(stopwords.words('english'))
     for i in ["yourself", "there", "once", "having", "they", "its", "yours", "itself", "is", "him", "themselves",
               "are",
@@ -785,13 +786,15 @@ def Prompt_response(req, predictor):
                             # 若有學生曾輸入過的詮釋 > 回答該句
                             find_common_QA = {'type': 'common_QA'}
                             find_common_result_QA = myCommonList.find_one(find_common_QA)
-                            match_response = choice(find_common_result['content']) + choice(find_common_result_QA['content']) + choice(
+                            match_repeat = choice(find_common_result_QA['content']) + choice(
                                 all_cursor[similarity_index[0]]['Student_elaboration'])
+                            match_response = choice(find_common_result['content'])
                         else:
                             result = all_cursor[similarity_index[0]]['Sentence_translate']
                             for word in ['。', '，', '！', '“', '”', '：']:
                                 result = result.replace(word, ' ')
-                            match_response = choice(find_common_result['content']) + result
+                            match_repeat = result
+                            match_response = choice(find_common_result['content'])
                         break
                     else:
                         similarity_sentence.remove(similarity_index)
@@ -813,8 +816,8 @@ def Prompt_response(req, predictor):
             response_star_copy = response_star
             response_star += '⭐' * user_result_updated['BookTalkSummary'][bookName]['Score']
 
-            response = match_response + response_star + '那接下來還有嗎？'
-            response_speech = match_response + response_star_copy + '那接下來還有嗎？'
+            response = match_response + response_star + '！' + match_repeat + '，' + '那接下來還有嗎？'
+            response_speech = match_response + response_star_copy + '！' + match_repeat + '，' + '那接下來還有嗎？'
         else:
             response = match_response + '那接下來還有嗎？'
             response_speech = match_response + '那接下來還有嗎？'
@@ -832,12 +835,14 @@ def Prompt_response(req, predictor):
                 # 若有學生曾輸入過的詮釋 > 回答該句
                 find_common_QA = {'type': 'common_QA'}
                 find_common_result_QA = myCommonList.find_one(find_common_QA)
-                response = choice(find_common_result['content']) + choice(find_common_result_QA['content']) + choice(all_cursor[twoColumnMatch]['Student_elaboration'])
+                response = choice(find_common_result['content'])
+                match_repeat = choice(find_common_result_QA['content']) + choice(all_cursor[twoColumnMatch]['Student_elaboration'])
             else:
                 result = all_cursor[twoColumnMatch]['Sentence_translate']
                 for word in ['。', '，', '！', '“', '”', '：']:
                     result = result.replace(word, ' ')
-                response = choice(find_common_result['content']) + result
+                match_repeat = result
+                response = choice(find_common_result['content'])
 
             if userClass == '戊班':
                 # 獎勵機制
@@ -855,8 +860,8 @@ def Prompt_response(req, predictor):
                 response_star_copy = response_star
                 response_star += '⭐' * user_result_updated['BookTalkSummary'][bookName]['Score']
 
-                response += response_star + '那接下來還有嗎？'
-                response_speech = response + response_star_copy + '那接下來還有嗎？'
+                response += response_star + '！' + match_repeat + '，'  + '那接下來還有嗎？'
+                response_speech = response + response_star_copy + '！' + match_repeat + '，' + '那接下來還有嗎？'
             else:
                 response += '那接下來還有嗎？'
                 response_speech = response
