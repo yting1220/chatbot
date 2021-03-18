@@ -18,7 +18,7 @@ def check_input(req):
     print('確認說話內容')
     response = ''
     userSay = req['intent']['query']
-    if userSay == '沒有了':
+    if '就這樣' in userSay:
         bookName = req['session']['params']['User_book']
         time = req['user']['lastSeenTime']
         user_id = req['session']['params']['User_id']
@@ -956,6 +956,9 @@ def expand(req):
         else:
             scene = 'Expand'
         expand_user = False
+        dialog_index = myDialogList.find().count()
+        dialog_id = myDialogList.find()[dialog_index - 1]['Dialog_id'] + 1
+        connectDB.addDialog(myDialogList, dialog_id, 'chatbot', response, time, session_id, req['scene']['name'])
         response_dict = {"prompt": {
             "firstSimple": {
                 "speech": response,
@@ -1151,6 +1154,17 @@ def suggestion(req):
 def Interest(req):
     userSay = req['session']['params']['User_say']
     sort_suggest_book = req['session']['params']['suggest_book']
+    bookName = req['session']['params']['User_book']
+    session_id = req['session']['id']
+    time = req['user']['lastSeenTime']
+    dbBookName = bookName.replace("'", "").replace('!', '').replace(",", "").replace(' ', '_')
+    nowBook = myClient[dbBookName]
+    myDialogList = nowBook['S_R_Dialog']
+    user_id = req['session']['params']['User_id']
+    # 記錄對話過程
+    dialog_index = myDialogList.find().count()
+    dialog_id = myDialogList.find()[dialog_index - 1]['Dialog_id'] + 1
+    connectDB.addDialog(myDialogList, dialog_id, 'Student ' + user_id, userSay, time, session_id, req['scene']['name'])
     if userSay == '有興趣':
         for index in range(len(sort_suggest_book)):
             book_result = myBookList.find_one({'bookName': sort_suggest_book[index][0]})
@@ -1162,6 +1176,8 @@ def Interest(req):
     elif userSay == '沒興趣':
         print()
     response = '我知道了！那謝謝你的分享！期待你下次的故事！Bye Bye！'
+    # 記錄對話
+    connectDB.addDialog(myDialogList, dialog_id, 'chatbot', response, time, session_id, req['scene']['name'])
     response_dict = {"prompt": {
         "firstSimple": {
             "speech": response,
