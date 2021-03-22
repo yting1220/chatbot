@@ -113,7 +113,7 @@ def user_login():
 def input_userId(req):
     print("START_id")
     userInput = req['intent']['query']
-    if userInput != '丁班' and userInput != '戊班':
+    if userInput != '丁班' and userInput != '戊班' and userInput != 'Banban' and userInput != 'DingBan':
         response = '要先點選班級對應的選項告訴我唷，'
         response_dict = {"prompt": {
             "firstSimple": {
@@ -156,6 +156,8 @@ def start_chat(req):
         userClass = req['session']['params']['User_class']
         if userClass == 'DingBan':
             userClass = '丁班'
+        if userClass == 'Banban':
+            userClass = '戊班'
         user_id = userClass + req['session']['params']['User_say'].replace('號', '')
         print('使用者：' + str(user_id))
         connect()
