@@ -30,6 +30,17 @@ def check_input(req):
         dialog_index = myDialogList.find().count()
         dialog_id = myDialogList.find()[dialog_index - 1]['Dialog_id'] + 1
         material_result = myMaterialList.find_one({})
+
+        if '戊班' in user_id:
+            # 獎勵機制
+            user_result = myUserList.find_one({'User_id': user_id})
+            user_result_updated = connectDB.copy.deepcopy(user_result)
+            if 'Score' not in user_result_updated['BookTalkSummary'][bookName]:
+                user_result_updated['BookTalkSummary'][bookName].update({'Score': 0})
+            user_result_updated['BookTalkSummary'][bookName]['Score'] += 1
+            print('update_user: ', user_result_updated)
+            myUserList.update_one(user_result, {'$set': user_result_updated})
+
         # 判斷接下來要進哪個引導問題
         nowScene = req['session']['params']['NowScene']
         connectDB.addDialog(myDialogList, dialog_id, 'Student ' + user_id, userSay, time, session_id, nowScene)
@@ -810,6 +821,7 @@ def Prompt_response(req, predictor):
             if 'Score' not in user_result_updated['BookTalkSummary'][bookName]:
                 user_result_updated['BookTalkSummary'][bookName].update({'Score': 0})
             user_result_updated['BookTalkSummary'][bookName]['Score'] += 3
+            print('update_user: ', user_result_updated)
             myUserList.update_one(user_result, {'$set': user_result_updated})
 
             common_result = myCommonList.find_one({'type': 'common_score'})
@@ -853,6 +865,7 @@ def Prompt_response(req, predictor):
                 if 'Score' not in user_result_updated['BookTalkSummary'][bookName]:
                     user_result_updated['BookTalkSummary'][bookName].update({'Score': 0})
                 user_result_updated['BookTalkSummary'][bookName]['Score'] += 3
+                print('update_user: ', user_result_updated)
                 myUserList.update_one(user_result, {'$set': user_result_updated})
 
                 common_result = myCommonList.find_one({'type': 'common_score'})
@@ -907,6 +920,7 @@ def expand(req):
     dbBookName = bookName.replace("'", "").replace('!', '').replace(",", "").replace(' ', '_')
     nowBook = myClient[dbBookName]
     myDialogList = nowBook['S_R_Dialog']
+    userClass = req['session']['params']['User_class']
     if 'User_expand' in req['session']['params'].keys():
         expand_user = req['session']['params']['User_expand']
     else:
@@ -916,7 +930,21 @@ def expand(req):
         common_result_expand = myCommonList.find_one(find_common_expand)
         find_common = {'type': 'common_like'}
         find_result = myCommonList.find_one(find_common)
-        response = choice(common_result_expand['content']) + ' ' + choice(find_result['content'])
+        # 戊班星星總數
+        if userClass == '戊班':
+            star_response = '你在這本書已經拿到XX顆星星囉！目前為止你有OO顆星星了！'
+            user_result = myUserList.find_one({'User_id':user_id})
+            book_star = 0
+            total_star = 0
+            if "Score" in user_result['BookTalkSummary'][bookName]:
+                book_star += user_result['BookTalkSummary'][bookName]['Score']
+            for book_key in user_result['BookTalkSummary'].keys():
+                if "Score" in user_result['BookTalkSummary'][book_key]:
+                    total_star += user_result['BookTalkSummary'][book_key]['Score']
+            star_response = star_response.replace('XX', str(book_star)).replace('OO', str(total_star))
+            response = choice(common_result_expand['content']) + '\r\n' + star_response +' ' + choice(find_result['content'])
+        else:
+            response = choice(common_result_expand['content']) +' ' + choice(find_result['content'])
         expand_user = True
         # 記錄對話過程
         dialog_index = myDialogList.find().count()

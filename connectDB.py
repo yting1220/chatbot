@@ -2,6 +2,7 @@ import copy
 
 
 def updateUser(myUserList, userId, bookName, state):
+
     bookTalkSummary = {'Finish': state}
 
     if not list(myUserList.find()):
@@ -23,7 +24,10 @@ def updateUser(myUserList, userId, bookName, state):
                 user_book_result = copy.deepcopy(now_user)
                 for book_data in user_book_result['BookTalkSummary'].keys():
                     if book_data == bookName:
-                        user_book_result['BookTalkSummary'][book_data] = bookTalkSummary
+                        if '戊班' in userId:
+                            user_book_result['BookTalkSummary'][book_data].update(bookTalkSummary)
+                        else:
+                            user_book_result['BookTalkSummary'][book_data] = bookTalkSummary
                 myUserList.update_one(find_user, {"$set": user_book_result})
             else:
                 # 同一筆資料下新增key值
