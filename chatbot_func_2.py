@@ -1212,6 +1212,8 @@ def Interest(req):
         print()
     response = '我知道了！那謝謝你的分享！期待你下次的故事！Bye Bye！'
     # 記錄對話
+    dialog_index = myDialogList.find().count()
+    dialog_id = myDialogList.find()[dialog_index - 1]['Dialog_id'] + 1
     connectDB.addDialog(myDialogList, dialog_id, 'chatbot', response, time, session_id, req['scene']['name'])
     response_dict = {"prompt": {
         "firstSimple": {
