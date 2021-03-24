@@ -228,7 +228,7 @@ def match_book(req):
         bookDB.append(i['bookNameTranslated'])
     if first_match:
         # 第一次先找出相似書名給使用者確認
-        similarity_book = []
+        similarity_book = {}
         for index in range(len(bookDB)):
             cosine = Cosine(2)
             s1 = userSay.lower()
@@ -243,15 +243,15 @@ def match_book(req):
                 value = cosine.similarity_profiles(p1, p2)
                 if value >= 0.45:
                     if index == 0:
-                        similarity_book.append(bookDB[index])
+                        similarity_book[bookDB[index]] = value
                     else:
                         if index % 2 == 0:
-                            similarity_book.append(bookDB[index])
+                            similarity_book[bookDB[index]] = value
                         else:
-                            similarity_book.append(bookDB[index - 1])
-        print(similarity_book)
-        similarity_book = list(set(similarity_book))
-        if len(similarity_book) == 0:
+                            similarity_book[bookDB[index - 1]] = value
+        sort_similarity_book = sorted(similarity_book.items(), key=lambda x: x[1], reverse=True)
+        print(sort_similarity_book)
+        if len(sort_similarity_book) == 0:
             second_check = True
             first_match = True
             # 無相似書籍 重新輸入
@@ -278,13 +278,13 @@ def match_book(req):
             button_item = []
             temp_bookList = {}
             allBook = ''
-            for index in range(len(similarity_book)):
-                temp_bookList[str(index + 1)] = similarity_book[index]
+            for index in range(len(sort_similarity_book[0:5])):
+                temp_bookList[str(index + 1)] = sort_similarity_book[index][0]
                 button_item.append({'title': str(index + 1)})
                 if index == 0:
-                    allBook += str(index + 1) + '：' + similarity_book[index]
+                    allBook += str(index + 1) + '：' + sort_similarity_book[index][0]
                 else:
-                    allBook += "、" + str(index + 1) + '：' + similarity_book[index]
+                    allBook += "、" + str(index + 1) + '：' + sort_similarity_book[index][0]
             button_item.append({'title': '都不是'})
             response = '我有看過 ' + allBook + " 你是在指哪一本呢? 告訴我書名對應的號碼吧"
             response_dict = {"prompt": {
@@ -396,6 +396,7 @@ def match_book(req):
                     }}
             }
 
+    print(response)
     return response_dict
 
 
