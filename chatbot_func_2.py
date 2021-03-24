@@ -18,7 +18,8 @@ def check_input(req):
     print('確認說話內容')
     response = ''
     userSay = req['intent']['query']
-    if '就這樣' in userSay:
+    ending = ['沒有了', '沒了', '我說完了', '故事結束了', '沒有']
+    if '就這樣' in userSay or userSay in ending:
         bookName = req['session']['params']['User_book']
         time = req['user']['lastSeenTime']
         user_id = req['session']['params']['User_id']
