@@ -1,0 +1,19 @@
+Sam looks in the box.*
+Sam is a bug.*
+Tim looks in the box.*
+Tim is a cat.*
+Kit looks in the box.*
+Nick looks in the box.*
+Nick is a rabbit.*
+Megan looks in the box.*
+The box is empty.*
+Megan is a robot.*
+Ben kicks the ball.*
+The ball is in the net.*
+Go Reds!*
+Lil kicks the ball.*
+The ball is in the net.*
+Ted kicks the ball.*
+Splash!*
+It is not in the net.*
+The ball is in the net!

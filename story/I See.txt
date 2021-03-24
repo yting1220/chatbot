@@ -1,0 +1,10 @@
+What do I see?*
+I see Biff.*
+Biff is my sister.*
+I see Chip.*
+Chip is my brother.*
+I see Mum and Dad.*
+I see Biff and Chip.*
+We see Floppy.*
+Floppy is our dog.*
+I see me.
