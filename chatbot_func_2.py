@@ -941,7 +941,7 @@ def expand(req):
             for book_key in user_result['BookTalkSummary'].keys():
                 if "Score" in user_result['BookTalkSummary'][book_key]:
                     total_star += user_result['BookTalkSummary'][book_key]['Score']
-            star_response = star_response.replace('XX', str(book_star)).replace('OO', str(total_star))
+            star_response = star_response.replace('XX', str(book_star))
             response = choice(common_result_expand['content']) + '\r\n' + star_response +' ' + choice(find_result['content'])
         else:
             response = choice(common_result_expand['content']) +' ' + choice(find_result['content'])
