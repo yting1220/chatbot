@@ -722,21 +722,20 @@ def Prompt_response(req, predictor):
                         for word in user_v:
                             for i in wordnet._morphy(word, pos='v'):
                                 word_morphy.append(i)
-                        for index in word_morphy:
-                            while True:
-                                try:
-                                    trans_word_pre = translator.translate(index, src='en', dest="zh-TW").text
-                                    trans_word = translator.translate(trans_word_pre, dest="en").extra_data[
-                                        'parsed']
-                                    if len(trans_word) > 3:
-                                        for i in trans_word[3][5][0]:
-                                            if i[0] == 'verb':
-                                                for trans_word_index in i[1]:
-                                                    word_case.append(trans_word_index[0])
-                                                break
-                                    break
-                                except Exception as translator_error:
-                                    print(translator_error)
+                        for index in word_morphy:                            
+                            try:
+                                trans_word_pre = translator.translate(index, src='en', dest="zh-TW").text
+                                trans_word = translator.translate(trans_word_pre, dest="en").extra_data[
+                                    'parsed']
+                                if len(trans_word) > 3:
+                                    for i in trans_word[3][5][0]:
+                                        if i[0] == 'verb':
+                                            for trans_word_index in i[1]:
+                                                word_case.append(trans_word_index[0])
+                                            break
+                            except Exception as translator_error:
+                                print(translator_error)
+                                continue
                         word_case.extend(word_morphy)
                         print(word_case)
                         for index in word_case:
@@ -757,20 +756,19 @@ def Prompt_response(req, predictor):
                         word_case = []
                         for word in user_c2:
                             # 找同義字
-                            while True:
-                                try:
-                                    trans_word_pre = translator.translate(word, src='en', dest="zh-TW").text
-                                    trans_word = translator.translate(trans_word_pre, dest="en").extra_data[
-                                        'parsed']
-                                    if len(trans_word) > 3:
-                                        for i in trans_word[3][5][0]:
-                                            if i[0] == 'noun':
-                                                for index in i[1]:
-                                                    word_case.append(index[0])
-                                                break
-                                    break
-                                except Exception as translator_error:
-                                    print(translator_error)
+                            try:
+                                trans_word_pre = translator.translate(word, src='en', dest="zh-TW").text
+                                trans_word = translator.translate(trans_word_pre, dest="en").extra_data[
+                                    'parsed']
+                                if len(trans_word) > 3:
+                                    for i in trans_word[3][5][0]:
+                                        if i[0] == 'noun':
+                                            for index in i[1]:
+                                                word_case.append(index[0])
+                                            break
+                            except Exception as translator_error:
+                                print(translator_error)
+                                continue
                             word_case.extend([word.lower(), word.capitalize()])
                         word_case = list(set(word_case))
                         print(word_case)
