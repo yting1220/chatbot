@@ -932,7 +932,8 @@ def expand(req):
         find_result = myCommonList.find_one(find_common)
         # 戊班星星總數
         if userClass == '戊班':
-            star_response = '你在這本書已經拿到XX顆星星囉！目前為止你有OO顆星星了！'
+            # 原始:目前為止你有OO顆星星了！ .replace('OO', str(total_star))
+            star_response = '你在這本書已經拿到XX顆星星囉！'
             user_result = myUserList.find_one({'User_id':user_id})
             book_star = 0
             total_star = 0
