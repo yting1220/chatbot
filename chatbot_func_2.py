@@ -13,7 +13,6 @@ myBookList: object
 myCommonList: object
 myUserList: object
 
-
 def check_input(req):
     print('確認說話內容')
     response = ''
@@ -32,7 +31,7 @@ def check_input(req):
         dialog_id = myDialogList.find()[dialog_index - 1]['Dialog_id'] + 1
         material_result = myMaterialList.find_one({})
 
-        if '戊班' in user_id:
+        if '戊班' in user_id and req['session']['params']['next_level']:
             # 獎勵機制
             user_result = myUserList.find_one({'User_id': user_id})
             user_result_updated = connectDB.copy.deepcopy(user_result)
@@ -63,6 +62,12 @@ def check_input(req):
                     'name': 'Expand'
                 }
             }}
+
+        if '戊班' in user_id and req['session']['params']['next_level']:
+            response_dict.update({'prompt':{'firstSimple':{'speech': '你講得很好呢！送你1顆星星。', 'text': '你講得很好呢！送你1顆星星⭐。'},
+                                            'content': {'image': {'url': 'https://pngimg.com/uploads/star/star_PNG41495.png', 'alt': 'star', 'height': 1, 'width': 1}}},
+                                  'session':{'params':{'next_level':False}}})
+
     else:
         scene = req['session']['params']['NextScene']
         response_dict = {"scene": {
@@ -71,7 +76,8 @@ def check_input(req):
             }
         }, "session": {
             "params": {
-                'User_say': userSay
+                'User_say': userSay,
+                'next_level': True
             }}
         }
 
@@ -201,7 +207,8 @@ def start_chat(req):
         }}, "session": {
         "params": {
             'User_id': user_id,
-            'NextScene': 'Match_book'
+            'NextScene': 'Match_book',
+            'next_level': False
         }
     }, "scene": {
         "next": {
