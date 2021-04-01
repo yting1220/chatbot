@@ -183,6 +183,7 @@ def start_chat(req):
         find_condition = {'type': 'common_start'}
         find_result = myCommonList.find_one(find_condition)
         response = choice(find_result['content'])
+        response_speech = response
         # 取得該使用者紀錄
         if list(myUserList.find()):
             user_exist = myUserList.find_one({"User_id": user_id})
@@ -199,21 +200,22 @@ def start_chat(req):
                 find_condition = {'type': 'common_registered'}
                 find_result = myCommonList.find_one(find_condition)
                 response = choice(find_result['content']).replace('X', book_record)
-        if userClass == '戊班':
-            response_tmp = '這學期你活動你已經累積XX顆星星⭐囉！'
-            response_tmp_2 = '這學期你活動你已經累積XX顆星星囉！'
-            total_star = 0
-            user_result = myUserList.find_one({'User_id':user_id})
-            for book_key in user_result['BookTalkSummary'].keys():
-                if "Score" in user_result['BookTalkSummary'][book_key]:
-                    total_star += user_result['BookTalkSummary'][book_key]['Score']
-            response_tmp = response_tmp.replace('XX', str(total_star))
-            response_tmp_2 = response_tmp_2.replace('XX', str(total_star))
-            response = response_tmp + '\r\n' + response
-            response_speech = response_tmp_2 + '\r\n' + response
+                if userClass == '戊班':
+                    response_tmp = '這學期活動你已經累積XX顆星星⭐囉！'
+                    response_tmp_2 = '這學期活動你已經累積XX顆星星囉！'
+                    total_star = 0
+                    user_result = myUserList.find_one({'User_id':user_id})
+                    for book_key in user_result['BookTalkSummary'].keys():
+                        if "Score" in user_result['BookTalkSummary'][book_key]:
+                            total_star += user_result['BookTalkSummary'][book_key]['Score']
+                    response_tmp = response_tmp.replace('XX', str(total_star))
+                    response_tmp_2 = response_tmp_2.replace('XX', str(total_star))
+                    response = response_tmp + '\r\n' + response
+                    response_speech = response_tmp_2 + '\r\n' + response
+
     response_dict = {"prompt": {
         "firstSimple": {
-            "speech": response,
+            "speech": response_speech,
             "text": response
         }}, "session": {
         "params": {
@@ -226,8 +228,6 @@ def start_chat(req):
             'name': 'Check_input'
         }}
     }
-    if userClass == '戊班':
-        response_dict['prompt']['firstSimple']['speech'] = response_speech
     print(response)
     return response_dict
 
@@ -846,10 +846,10 @@ def Prompt_response(req, predictor):
 
             common_result = myCommonList.find_one({'type': 'common_score'})
             response_star = choice(common_result['content'])
-            response_star = response_star.replace('X', str(user_result_updated['BookTalkSummary'][bookName]['Score']))
+            response_star = response_star.replace('X', 3)
             response_star_copy = response_star
-            response_star += '⭐' * user_result_updated['BookTalkSummary'][bookName]['Score']
-
+            response_star += '⭐' * 3
+            # user_result_updated['BookTalkSummary'][bookName]['Score']
             response = match_response + response_star + '！' + match_repeat + '，' + '那接下來還有嗎？'
             response_speech = match_response + response_star_copy + '！' + match_repeat + '，' + '那接下來還有嗎？'
         else:
@@ -890,10 +890,9 @@ def Prompt_response(req, predictor):
 
                 common_result = myCommonList.find_one({'type': 'common_score'})
                 response_star = choice(common_result['content'])
-                response_star = response_star.replace('X',
-                                                      str(user_result_updated['BookTalkSummary'][bookName]['Score']))
+                response_star = response_star.replace('X', 3)
                 response_star_copy = response_star
-                response_star += '⭐' * user_result_updated['BookTalkSummary'][bookName]['Score']
+                response_star += '⭐' * 3
 
                 response += response_star + '！' + match_repeat + '，'  + '那接下來還有嗎？'
                 response_speech = response + response_star_copy + '！' + match_repeat + '，' + '那接下來還有嗎？'
@@ -958,7 +957,7 @@ def expand(req):
             book_star = 0
             total_star = 0
             if "Score" in user_result['BookTalkSummary'][bookName]:
-                book_star += user_result['BookTalkSummary'][bookName]['Score']
+                book_star = user_result['BookTalkSummary'][bookName]['Score']
             for book_key in user_result['BookTalkSummary'].keys():
                 if "Score" in user_result['BookTalkSummary'][book_key]:
                     total_star += user_result['BookTalkSummary'][book_key]['Score']
