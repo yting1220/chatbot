@@ -199,7 +199,18 @@ def start_chat(req):
                 find_condition = {'type': 'common_registered'}
                 find_result = myCommonList.find_one(find_condition)
                 response = choice(find_result['content']).replace('X', book_record)
-
+        if userClass == '戊班':
+            response_tmp = '這學期你活動你已經累積XX顆星星⭐囉！'
+            response_tmp_2 = '這學期你活動你已經累積XX顆星星囉！'
+            total_star = 0
+            user_result = myUserList.find_one({'User_id':user_id})
+            for book_key in user_result['BookTalkSummary'].keys():
+                if "Score" in user_result['BookTalkSummary'][book_key]:
+                    total_star += user_result['BookTalkSummary'][book_key]['Score']
+            response_tmp = response_tmp.replace('XX', str(total_star))
+            response_tmp_2 = response_tmp_2.replace('XX', str(total_star))
+            response = response_tmp + '\r\n' + response
+            response_speech = response_tmp_2 + '\r\n' + response
     response_dict = {"prompt": {
         "firstSimple": {
             "speech": response,
@@ -215,6 +226,8 @@ def start_chat(req):
             'name': 'Check_input'
         }}
     }
+    if userClass == '戊班':
+        response_dict['prompt']['firstSimple']['speech'] = response_speech
     print(response)
     return response_dict
 
@@ -940,7 +953,7 @@ def expand(req):
         # 戊班星星總數
         if userClass == '戊班':
             # 原始:目前為止你有OO顆星星了！ .replace('OO', str(total_star))
-            star_response = '你在這本書已經拿到XX顆星星囉！'
+            star_response = '你在這本書已經拿到XX顆星星⭐囉！'
             user_result = myUserList.find_one({'User_id':user_id})
             book_star = 0
             total_star = 0
@@ -971,6 +984,8 @@ def expand(req):
                 }
             }
         }
+        if userClass == '戊班':
+            response_dict['prompt']['firstSimple']['speech'] = response.replace('⭐','')
     else:
         response = ''
         suggest_like = False
