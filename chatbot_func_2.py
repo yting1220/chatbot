@@ -208,10 +208,11 @@ def start_chat(req):
                     for book_key in user_result['BookTalkSummary'].keys():
                         if "Score" in user_result['BookTalkSummary'][book_key]:
                             total_star += user_result['BookTalkSummary'][book_key]['Score']
-                    response_tmp = response_tmp.replace('XX', str(total_star))
-                    response_tmp_2 = response_tmp_2.replace('XX', str(total_star))
-                    response = response_tmp + '\r\n' + response
-                    response_speech = response_tmp_2 + '\r\n' + response
+                    if total_star > 0:
+                        response_tmp = response_tmp.replace('XX', str(total_star))
+                        response_tmp_2 = response_tmp_2.replace('XX', str(total_star))
+                        response = response_tmp + '\r\n' + response
+                        response_speech = response_tmp_2 + '\r\n' + response
 
     response_dict = {"prompt": {
         "firstSimple": {
@@ -846,7 +847,7 @@ def Prompt_response(req, predictor):
 
             common_result = myCommonList.find_one({'type': 'common_score'})
             response_star = choice(common_result['content'])
-            response_star = response_star.replace('X', 3)
+            response_star = response_star.replace('X', '3')
             response_star_copy = response_star
             response_star += '⭐' * 3
             # user_result_updated['BookTalkSummary'][bookName]['Score']
@@ -890,7 +891,7 @@ def Prompt_response(req, predictor):
 
                 common_result = myCommonList.find_one({'type': 'common_score'})
                 response_star = choice(common_result['content'])
-                response_star = response_star.replace('X', 3)
+                response_star = response_star.replace('X', '3')
                 response_star_copy = response_star
                 response_star += '⭐' * 3
 
