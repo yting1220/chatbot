@@ -5,25 +5,31 @@ import copy
 from nltk.stem import WordNetLemmatizer
 from googletrans import Translator
 import createLibrary
-story_name = "Jungle Journey"
+story_name = ""
 content_list = []
 words = []
 entityInfo = {}
 
 
 def createStory():
-    global words
-    path = "story/New/" + story_name + ".txt"
-    f = open(path, mode='r')
-    words = f.read()
-    story_content = words.replace('*', '').replace('\n', ' ')
-    createLibrary.addBook(story_name, story_content)
-    f.close()
+    global words, story_name, entityInfo
+    path = "story/"
+    allList = createLibrary.os.listdir(path)
+    for file in allList:
+        story_name = file.replace('.txt', '')
+        file_path = path + file
+        if createLibrary.os.path.isfile(file_path):
+            with open(file_path, 'r') as f:
+                entityInfo = {}
+                words = f.read()
+                story_content = words.replace('*', '').replace('\n', ' ')
+                createLibrary.addBook(story_name, story_content)
+                story_analysis()
+                getMaterial()
 
 
 def coReference():
     global content_list, entityInfo
-    createStory()
     content = words.replace('\n', ' ')
     predictor = Predictor.from_path(
         "https://storage.googleapis.com/allennlp-public-models/coref-spanbert-large-2020.02.27.tar.gz")
@@ -65,6 +71,7 @@ def story_analysis():
     myBook = myClient[story_name.replace(' ', '_').replace("'", "").replace("!", "").replace(",", "")]
     myVerbList = myBook.VerbTable
     myKeyList = myBook.KeywordTable
+    myKeyList.delete_many({})
     coReference()
     wnl = WordNetLemmatizer()
     verbName = []
@@ -100,6 +107,8 @@ def story_analysis():
         print(sentence)
         # 抓出主要SVO
         svo = {}
+        # 暫存原本句子的動詞
+        tempVerb = []
         for j in range(len(result['pos'])):
             if v == False and (result['pos'][j] == 'PROPN' or result['pos'][j] == 'NOUN' or result['pos'][j] == 'PRON'):
                 if result['words'][j] not in c1_list:
@@ -111,6 +120,7 @@ def story_analysis():
                     v = True
                     if result['words'][j] not in v_list:
                         # 找出動詞keyword
+                        tempVerb.append(result['words'][j])
                         word = wnl.lemmatize(result['words'][j], 'v')
                         v_list.append(word.lower())
                         verbName.append(word.lower())
@@ -144,8 +154,8 @@ def story_analysis():
                     else:
                         temp = dialog_list[1].split(" ")
                     for d_index in range(len(temp)):
-                        for index in range(len(v_list)):
-                            if temp[d_index] == v_list[index]:
+                        for index in range(len(tempVerb)):
+                            if temp[d_index] == tempVerb[index]:
                                 match = True
                                 if d_index == 0:
                                     # "" say XXX
@@ -170,8 +180,8 @@ def story_analysis():
                 else:
                     temp = dialog_list[0].split(" ")
                 for d_index in range(len(temp)):
-                    for index in range(len(v_list)):
-                        if temp[d_index] == v_list[index]:
+                    for index in range(len(tempVerb)):
+                        if temp[d_index] == tempVerb[index]:
                             match = True
                             speaker = ' '.join(temp[0:d_index])
                             # 改寫原句 將對話句子的說話者代名詞改為角色名稱
@@ -243,7 +253,7 @@ def getMaterial():
     # 動詞
     find_documentVerb = find_document['Verb_list']
     # find_documentVerb = find_document[1]['Verb_list']
-    stop_words = ['is', 'are', 'was', 'were', 'do', 'can', 'may', 'would', 'ca', 'has', "'s", 'say', 'be', 'ask', 'make', 'will', 'have']
+    stop_words = ['go','is', 'are', 'was', 'were', 'do', 'can', 'may', 'would', 'ca', 'has', "'s", 'say', 'be', 'ask', 'make', 'will', 'have', 'must']
     for i in stop_words:
         if i in find_documentVerb:
             del find_documentVerb[i]
@@ -270,14 +280,13 @@ def getMaterial():
         character.append(i[0])
     for i in sort_Verb[0:3]:
         verb.append(i[0])
+    # 沒對話
     myMateriaDict = {'Character': character, 'Main_Verb': verb}
+    # 有對話
     # myMateriaDict = {'Character': character, 'Main_Verb': verb, 'Sentence_id': sentence_id}
     myMaterialList.insert_one(myMateriaDict)
     print(myMateriaDict)
 
 
 if __name__ == "__main__":
-    story_analysis()
-    getMaterial()
-    # coReference()
-    # createStory()
+    createStory()
