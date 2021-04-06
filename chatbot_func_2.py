@@ -13,6 +13,7 @@ myBookList: object
 myCommonList: object
 myUserList: object
 
+
 def check_input(req):
     print('確認說話內容')
     response = ''
@@ -64,9 +65,11 @@ def check_input(req):
             }}
 
         if '戊班' in user_id and req['session']['params']['next_level']:
-            response_dict.update({'prompt':{'firstSimple':{'speech': '你講得很好呢！送你1顆星星。', 'text': '你講得很好呢！送你1顆星星⭐。'},
-                                            'content': {'image': {'url': 'https://pngimg.com/uploads/star/star_PNG41495.png', 'alt': 'star', 'height': 1, 'width': 1}}},
-                                  'session':{'params':{'next_level':False}}})
+            response_dict.update({'prompt': {'firstSimple': {'speech': '你講得很好呢！送你1顆星星。', 'text': '你講得很好呢！送你1顆星星⭐。'},
+                                             'content': {
+                                                 'image': {'url': 'https://pngimg.com/uploads/star/star_PNG41495.png',
+                                                           'alt': 'star', 'height': 1, 'width': 1}}},
+                                  'session': {'params': {'next_level': False}}})
 
     else:
         scene = req['session']['params']['NextScene']
@@ -163,6 +166,7 @@ def input_userId(req):
 # 詢問書名
 def start_chat(req):
     print("START_ask")
+    response_speech = ''
     if 'User_second_check' in req['session']['params'].keys():
         second_check = req['session']['params']['User_second_check']
     else:
@@ -204,7 +208,7 @@ def start_chat(req):
                     response_tmp = '這學期活動你已經累積XX顆星星⭐囉！'
                     response_tmp_2 = '這學期活動你已經累積XX顆星星囉！'
                     total_star = 0
-                    user_result = myUserList.find_one({'User_id':user_id})
+                    user_result = myUserList.find_one({'User_id': user_id})
                     for book_key in user_result['BookTalkSummary'].keys():
                         if "Score" in user_result['BookTalkSummary'][book_key]:
                             total_star += user_result['BookTalkSummary'][book_key]['Score']
@@ -743,7 +747,7 @@ def Prompt_response(req, predictor):
                         for word in user_v:
                             for i in wordnet._morphy(word, pos='v'):
                                 word_morphy.append(i)
-                        for index in word_morphy:                            
+                        for index in word_morphy:
                             try:
                                 trans_word_pre = translator.translate(index, src='en', dest="zh-TW").text
                                 trans_word = translator.translate(trans_word_pre, dest="en").extra_data[
@@ -871,7 +875,8 @@ def Prompt_response(req, predictor):
                 find_common_QA = {'type': 'common_QA'}
                 find_common_result_QA = myCommonList.find_one(find_common_QA)
                 response = choice(find_common_result['content'])
-                match_repeat = choice(find_common_result_QA['content']) + choice(all_cursor[twoColumnMatch]['Student_elaboration'])
+                match_repeat = choice(find_common_result_QA['content']) + choice(
+                    all_cursor[twoColumnMatch]['Student_elaboration'])
             else:
                 result = all_cursor[twoColumnMatch]['Sentence_translate']
                 for word in ['。', '，', '！', '“', '”', '：']:
@@ -895,7 +900,7 @@ def Prompt_response(req, predictor):
                 response_star_copy = response_star
                 response_star += '⭐' * 3
 
-                response += response_star + '！' + match_repeat + '，'  + '那接下來還有嗎？'
+                response += response_star + '！' + match_repeat + '，' + '那接下來還有嗎？'
                 response_speech = response + response_star_copy + '！' + match_repeat + '，' + '那接下來還有嗎？'
             else:
                 response += '那接下來還有嗎？'
@@ -923,7 +928,9 @@ def Prompt_response(req, predictor):
         }}
     }
     if not noMatch and userClass == '戊班':
-        response_dict['prompt'].update({'content': {'image': {'url': 'https://pngimg.com/uploads/star/star_PNG41495.png', 'alt': 'star', 'height': 1, 'width': 1}}})
+        response_dict['prompt'].update({'content': {
+            'image': {'url': 'https://pngimg.com/uploads/star/star_PNG41495.png', 'alt': 'star', 'height': 1,
+                      'width': 1}}})
 
     print(response)
     return response_dict
@@ -954,7 +961,7 @@ def expand(req):
         if userClass == '戊班':
             # 原始:目前為止你有OO顆星星了！ .replace('OO', str(total_star))
             star_response = '你在這本書已經拿到XX顆星星⭐囉！'
-            user_result = myUserList.find_one({'User_id':user_id})
+            user_result = myUserList.find_one({'User_id': user_id})
             book_star = 0
             total_star = 0
             if "Score" in user_result['BookTalkSummary'][bookName]:
@@ -963,9 +970,10 @@ def expand(req):
                 if "Score" in user_result['BookTalkSummary'][book_key]:
                     total_star += user_result['BookTalkSummary'][book_key]['Score']
             star_response = star_response.replace('XX', str(book_star))
-            response = choice(common_result_expand['content']) + '\r\n' + star_response +' ' + choice(find_result['content'])
+            response = choice(common_result_expand['content']) + '\r\n' + star_response + ' ' + choice(
+                find_result['content'])
         else:
-            response = choice(common_result_expand['content']) +' ' + choice(find_result['content'])
+            response = choice(common_result_expand['content']) + ' ' + choice(find_result['content'])
         expand_user = True
         # 記錄對話過程
         dialog_index = myDialogList.find().count()
@@ -985,7 +993,7 @@ def expand(req):
             }
         }
         if userClass == '戊班':
-            response_dict['prompt']['firstSimple']['speech'] = response.replace('⭐','')
+            response_dict['prompt']['firstSimple']['speech'] = response.replace('⭐', '')
     else:
         response = ''
         suggest_like = False
@@ -1181,10 +1189,11 @@ def suggestion(req):
         sort_suggest_book = sorted(suggest_book.items(), key=lambda x: x[1], reverse=False)
     find_common_suggestion = {'type': 'common_suggestion_response'}
     find_suggestion = myCommonList.find_one(find_common_suggestion)
-    response = ',' + choice(find_result['content']).replace('XX', sort_suggest_book[0][0]) + '\n' + choice(find_suggestion['content'])
+    response = ',' + choice(find_result['content']).replace('XX', sort_suggest_book[0][0]) + '\n' + choice(
+        find_suggestion['content'])
     url = 'http://story.csie.ncu.edu.tw/storytelling/images/chatbot_books/' + sort_suggest_book[0][0].replace(' ',
                                                                                                               '%20') + '.jpg'
-    print('URL:'+url)
+    print('URL:' + url)
     response_dict = {"prompt": {
         "firstSimple": {
             "speech": response,
