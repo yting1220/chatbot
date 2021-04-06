@@ -855,8 +855,9 @@ def Prompt_response(req, predictor):
             response_star_copy = response_star
             response_star += '⭐' * 3
             # user_result_updated['BookTalkSummary'][bookName]['Score']
-            response = match_response + response_star + '！' + match_repeat + '，' + '那接下來還有嗎？'
-            response_speech = match_response + response_star_copy + '！' + match_repeat + '，' + '那接下來還有嗎？'
+            response = match_response + match_repeat + '，' +  response_star + '！' + '那接下來還有嗎？'
+            response_speech = match_response + match_repeat + '，'  + response_star_copy + '！' + '那接下來還有嗎？'
+            print('response:'+response, 'response_speech:'+response_speech)
         else:
             response = match_response + '那接下來還有嗎？'
             response_speech = match_response + '那接下來還有嗎？'
@@ -900,8 +901,8 @@ def Prompt_response(req, predictor):
                 response_star_copy = response_star
                 response_star += '⭐' * 3
 
-                response += response_star + '！' + match_repeat + '，' + '那接下來還有嗎？'
-                response_speech = response + response_star_copy + '！' + match_repeat + '，' + '那接下來還有嗎？'
+                response += match_repeat + '，'  + response_star  + '！' + '那接下來還有嗎？'
+                response_speech = response + match_repeat + '，' +  response_star_copy  + '！' + '那接下來還有嗎？'
             else:
                 response += '那接下來還有嗎？'
                 response_speech = response
@@ -917,6 +918,8 @@ def Prompt_response(req, predictor):
     dialog_id = myDialogList.find()[dialog_index - 1]['Dialog_id'] + 1
     connectDB.addDialog(myDialogList, dialog_id, 'chatbot', response, time, session_id,
                         req['session']['params']['NowScene'])
+
+    response_speech = response_speech.replace('⭐','')
     response_dict = {"prompt": {
         "firstSimple": {
             "speech": response_speech,
@@ -932,7 +935,7 @@ def Prompt_response(req, predictor):
             'image': {'url': 'https://pngimg.com/uploads/star/star_PNG41495.png', 'alt': 'star', 'height': 1,
                       'width': 1}}})
 
-    print(response)
+    print('response:'+response, 'response_speech:'+response_speech)
     return response_dict
 
 
