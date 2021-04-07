@@ -826,13 +826,13 @@ def Prompt_response(req, predictor):
                             find_common_result_QA = myCommonList.find_one(find_common_QA)
                             match_repeat = choice(find_common_result_QA['content']) + choice(
                                 all_cursor[similarity_index[0]]['Student_elaboration'])
-                            match_response = choice(find_common_result['content'])+match_repeat
+                            match_response = choice(find_common_result['content'])
                         else:
                             result = all_cursor[similarity_index[0]]['Sentence_translate']
                             for word in ['。', '，', '！', '“', '”', '：']:
                                 result = result.replace(word, ' ')
                             match_repeat = result
-                            match_response = choice(find_common_result['content'])+match_repeat
+                            match_response = choice(find_common_result['content'])
                         break
                     else:
                         similarity_sentence.remove(similarity_index)
@@ -859,8 +859,8 @@ def Prompt_response(req, predictor):
             response_speech = match_response + match_repeat + '，' + response_star_copy + '！' + '那接下來還有嗎？'
             print('response:'+response, 'response_speech:'+response_speech)
         else:
-            response = match_response + '那接下來還有嗎？'
-            response_speech = match_response + '那接下來還有嗎？'
+            response = match_response+match_repeat + '那接下來還有嗎？'
+            response_speech = match_response+match_repeat + '那接下來還有嗎？'
     else:
         if len(twoColumn) != 0:
             print('有兩欄位的')
