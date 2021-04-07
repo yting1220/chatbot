@@ -79,10 +79,11 @@ def check_input(req):
             }
         }, "session": {
             "params": {
-                'User_say': userSay,
-                'next_level': True
+                'User_say': userSay
             }}
         }
+        if scene == 'Prompt_response':
+            response_dict['session']['params'].update({'next_level':True})
 
     print(response)
     return response_dict
