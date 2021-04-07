@@ -826,13 +826,13 @@ def Prompt_response(req, predictor):
                             find_common_result_QA = myCommonList.find_one(find_common_QA)
                             match_repeat = choice(find_common_result_QA['content']) + choice(
                                 all_cursor[similarity_index[0]]['Student_elaboration'])
-                            match_response = choice(find_common_result['content'])
+                            match_response = choice(find_common_result['content'])+match_repeat
                         else:
                             result = all_cursor[similarity_index[0]]['Sentence_translate']
                             for word in ['。', '，', '！', '“', '”', '：']:
                                 result = result.replace(word, ' ')
                             match_repeat = result
-                            match_response = choice(find_common_result['content'])
+                            match_response = choice(find_common_result['content'])+match_repeat
                         break
                     else:
                         similarity_sentence.remove(similarity_index)
@@ -855,8 +855,8 @@ def Prompt_response(req, predictor):
             response_star_copy = response_star
             response_star += '⭐' * 3
             # user_result_updated['BookTalkSummary'][bookName]['Score']
-            response = match_response + match_repeat + '，' +  response_star + '！' + '那接下來還有嗎？'
-            response_speech = match_response + match_repeat + '，'  + response_star_copy + '！' + '那接下來還有嗎？'
+            response = match_response + match_repeat + '，' + response_star + '！' + '那接下來還有嗎？'
+            response_speech = match_response + match_repeat + '，' + response_star_copy + '！' + '那接下來還有嗎？'
             print('response:'+response, 'response_speech:'+response_speech)
         else:
             response = match_response + '那接下來還有嗎？'
@@ -901,10 +901,10 @@ def Prompt_response(req, predictor):
                 response_star_copy = response_star
                 response_star += '⭐' * 3
 
-                response += match_repeat + '，'  + response_star  + '！' + '那接下來還有嗎？'
-                response_speech = response + match_repeat + '，' +  response_star_copy  + '！' + '那接下來還有嗎？'
+                response += match_repeat + '，' + response_star + '！' + '那接下來還有嗎？'
+                response_speech = response + match_repeat + '，' + response_star_copy + '！' + '那接下來還有嗎？'
             else:
-                response += '那接下來還有嗎？'
+                response += match_repeat + '那接下來還有嗎？'
                 response_speech = response
         else:
             # 沒比對到的固定回覆
@@ -919,7 +919,7 @@ def Prompt_response(req, predictor):
     connectDB.addDialog(myDialogList, dialog_id, 'chatbot', response, time, session_id,
                         req['session']['params']['NowScene'])
 
-    response_speech = response_speech.replace('⭐','')
+    response_speech = response_speech.replace('⭐', '')
     response_dict = {"prompt": {
         "firstSimple": {
             "speech": response_speech,
@@ -942,7 +942,6 @@ def Prompt_response(req, predictor):
 # 學生心得回饋
 def expand(req):
     print("Expand")
-    state = True
     user_id = req['session']['params']['User_id']
     bookName = req['session']['params']['User_book']
     time = req['user']['lastSeenTime']
@@ -1039,11 +1038,9 @@ def expand(req):
                 }
             },
             "session": {
-                "params": dict(User_sentiment=suggest_like,
-                               User_state=state, User_expand=expand_user)}
+                "params": dict(User_sentiment=suggest_like, User_expand=expand_user)}
         }
 
-    connectDB.updateUser(myUserList, user_id, bookName, state)
     print(response)
     return response_dict
 
@@ -1051,6 +1048,7 @@ def expand(req):
 # 從資料庫中取資料做為機器人給予學生之回饋
 def feedback(req):
     print('Feedback')
+    state = True
     userSay = req['intent']['query']
     user_id = req['session']['params']['User_id']
     bookName = req['session']['params']['User_book']
@@ -1096,8 +1094,11 @@ def feedback(req):
             "next": {
                 'name': 'Check_suggestion'
             }
-        }
+        },
+        "session": {
+            "params": {'User_state': state}}
     }
+    connectDB.updateUser(myUserList, user_id, bookName, state)
     connectDB.addFeedback(myFeedback, user_id, suggest_like, userSay)
     # 記錄對話過程
     dialog_index = myDialogList.find().count()
@@ -1109,6 +1110,7 @@ def feedback(req):
 
 # 判斷是否進入推薦
 def Check_suggestion(req):
+
     print('Suggestion or not')
     bookName = req['session']['params']['User_book']
     session_id = req['session']['id']
