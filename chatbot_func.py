@@ -68,7 +68,7 @@ def connect():
 # 詢問班級
 def user_login():
     print("START_class")
-    response = '哈囉！請先告訴我你的班級唷！'
+    response = '("請注意，此應用程序使用的用戶生成的內容可能不適合所有用戶") 哈囉！請先告訴我你的班級唷！'
     response_dict = {"prompt": {
         "firstSimple": {
             "speech": response,
@@ -443,12 +443,12 @@ def prompt(req):
         # 詢問是否繼續
         checkStage = 'first'
         go_Continue = True
-    elif input_sentence >= (all_cursor.count() / 2) and checkStage == 'first' and not double_check:
-        checkStage = 'second'
-        go_Continue = True
-    elif input_sentence >= (all_cursor.count() * 2 / 3) and checkStage == 'second' and not double_check:
-        checkStage = 'finalCheck'
-        go_Continue = True
+    # elif input_sentence >= (all_cursor.count() / 2) and checkStage == 'first' and not double_check:
+    #     checkStage = 'second'
+    #     go_Continue = True
+    # elif input_sentence >= (all_cursor.count() * 2 / 3) and checkStage == 'second' and not double_check:
+    #     checkStage = 'finalCheck'
+    #     go_Continue = True
     else:
         if double_check:
             response = ''
