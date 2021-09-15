@@ -67,7 +67,7 @@ def coReference():
 
 
 def story_analysis():
-    myClient = pymongo.MongoClient("mongodb://root:ltlab35316@140.115.53.196:27017/")
+    myClient = pymongo.MongoClient("mongodb://Account_name:Account_password@server/")
     myBook = myClient[story_name.replace(' ', '_').replace("'", "").replace("!", "").replace(",", "")]
     myVerbList = myBook.VerbTable
     myKeyList = myBook.KeywordTable
@@ -232,7 +232,7 @@ def story_analysis():
 
 # 建立主要人物、動詞、對話資料庫
 def getMaterial():
-    myClient = pymongo.MongoClient("mongodb://root:ltlab35316@140.115.53.196:27017/")
+    myClient = pymongo.MongoClient("mongodb://Account_name:Account_password@server/")
     myBook = myClient[story_name.replace(' ', '_').replace("'", "").replace("!", "").replace(",", "")]
     myMaterialList = myBook.MaterialTable
     myKeyList = myBook.KeywordTable
